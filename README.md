@@ -6,6 +6,7 @@ QA-Panel is an innovative desktop application built with Electron, designed to s
 
 - **Context-Aware Q&A Management**: Automatically associates questions and answers with the application you're currently using.
 - **Customizable Global Shortcuts**: Quick access to key functions without interrupting your workflow.
+- **Enhanced Keyboard Navigation**: Efficiently manage your Q&A entries using keyboard shortcuts.
 - **Transparent and Frameless Interface**: Sleek, modern design that doesn't obstruct your view.
 - **Persistent Data Storage**: Your Q&A data is automatically saved and persists between sessions.
 - **Import/Export Functionality**: Easily backup or transfer your data.
@@ -14,11 +15,18 @@ QA-Panel is an innovative desktop application built with Electron, designed to s
 
 ## Key Shortcuts (Default)
 
+### Global Shortcuts
 - Show/Hide App: `Ctrl+Shift+Space`
 - Focus on New Question: `Ctrl+Shift+N`
 - Export Data: `Ctrl+Shift+E`
 - Import Data: `Ctrl+Shift+I`
-- Delete Last Question: `Ctrl+Shift+D`
+
+### In-App Keyboard Navigation
+- Focus on Specific Question: `1-9` (corresponds to question number)
+- Edit Focused Question: `q`
+- Edit Focused Answer: `a`
+- Delete Focused Question: `d`
+- Unfocus Current Element: `Escape`
 
 ## Installation
 
