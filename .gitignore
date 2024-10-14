@@ -94,3 +94,6 @@ build/
 # OS-specific
 .DS_Store
 Thumbs.db
+
+# Project-specific
+QA-Panel Coding AI Context.md

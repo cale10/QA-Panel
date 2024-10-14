@@ -27,8 +27,7 @@ let settings = {
     toggleApp: 'CommandOrControl+Shift+Space',
     newQuestion: 'CommandOrControl+Shift+N',
     exportData: 'CommandOrControl+Shift+E',
-    importData: 'CommandOrControl+Shift+I',
-    deleteQuestion: 'CommandOrControl+Shift+D'
+    importData: 'CommandOrControl+Shift+I'
   }
 };
 
@@ -175,9 +174,6 @@ function setupGlobalShortcuts() {
         case 'importData':
           mainWindow.webContents.send('import-data');
           break;
-        case 'deleteQuestion':
-          mainWindow.webContents.send('delete-question');
-          break;
       }
     });
   });
@@ -230,7 +226,6 @@ app.on('before-quit', () => {
 });
 
 function setupIpcHandlers() {
-  // IPC handlers
   ipcMain.handle('add-question', async (event, question, answer) => {
     console.log('Adding question:', question);
     qaList.push({ id: Date.now(), question, answer, app: settings.lastUsedApp });
@@ -275,50 +270,6 @@ function setupIpcHandlers() {
 
   ipcMain.handle('get-last-used-app', () => {
     return settings.lastUsedApp;
-  });
-
-  ipcMain.handle('export-data', async (event) => {
-    const { filePath } = await dialog.showSaveDialog(mainWindow, {
-      title: 'Export QA Data',
-      defaultPath: path.join(app.getPath('documents'), 'qa-data-export.json'),
-      filters: [{ name: 'JSON Files', extensions: ['json'] }]
-    });
-
-    if (filePath) {
-      try {
-        const exportData = { qaList, settings };
-        fs.writeFileSync(filePath, JSON.stringify(exportData), 'utf-8');
-        return { success: true, message: 'Data exported successfully' };
-      } catch (error) {
-        console.error('Error exporting data:', error);
-        return { success: false, message: 'Failed to export data' };
-      }
-    }
-    return { success: false, message: 'Export cancelled' };
-  });
-
-  ipcMain.handle('import-data', async (event) => {
-    const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-      title: 'Import QA Data',
-      properties: ['openFile'],
-      filters: [{ name: 'JSON Files', extensions: ['json'] }]
-    });
-
-    if (filePaths && filePaths.length > 0) {
-      try {
-        const data = fs.readFileSync(filePaths[0], 'utf-8');
-        const importedData = JSON.parse(data);
-        qaList = importedData.qaList || [];
-        settings = { ...settings, ...importedData.settings };
-        saveData();
-        setupGlobalShortcuts(); // Refresh shortcuts after import
-        return { success: true, message: 'Data imported successfully' };
-      } catch (error) {
-        console.error('Error importing data:', error);
-        return { success: false, message: 'Failed to import data' };
-      }
-    }
-    return { success: false, message: 'Import cancelled' };
   });
 }
 

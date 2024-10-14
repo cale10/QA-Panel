@@ -4,21 +4,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const answerInput = document.getElementById('answerInput');
     const questionList = document.getElementById('questionList');
     const submitBtn = document.getElementById('submitBtn');
-    const settingsForm = document.getElementById('settingsForm');
-    const backgroundColorInput = document.getElementById('backgroundColor');
-    const opacityInput = document.getElementById('opacity');
-    const fontInput = document.getElementById('font');
-    const fontSizeInput = document.getElementById('fontSize');
-    const fontColorInput = document.getElementById('fontColor');
-    const toggleAppInput = document.getElementById('toggleApp');
-    const newQuestionInput = document.getElementById('newQuestion');
-    const exportDataInput = document.getElementById('exportData');
-    const importDataInput = document.getElementById('importData');
-    const deleteQuestionInput = document.getElementById('deleteQuestion');
     const lastUsedAppDiv = document.getElementById('lastUsedApp');
 
     let editingId = null;
     let currentQuestions = [];
+    let focusedQuestionIndex = -1;
+    let settings = {};
+    let lastKeyPressTime = 0;
 
     // Load existing questions and settings
     loadQuestions();
@@ -29,26 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.electronAPI.onUpdateLastUsedApp((event, lastUsedApp) => {
         updateLastUsedApp();
         loadQuestions();
-    });
-
-    // Listen for focus new question event
-    window.electronAPI.onFocusNewQuestion(() => {
-        focusOnNewQuestion();
-    });
-
-    // Listen for export data event
-    window.electronAPI.onExportData(() => {
-        exportData();
-    });
-
-    // Listen for import data event
-    window.electronAPI.onImportData(() => {
-        importData();
-    });
-
-    // Listen for delete question event
-    window.electronAPI.onDeleteQuestion(() => {
-        deleteLastQuestion();
     });
 
     questionForm.addEventListener('submit', async (e) => {
@@ -66,37 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             questionInput.value = '';
             answerInput.value = '';
-            loadQuestions();
-            focusOnNewQuestion();
+            await loadQuestions();
+            focusQuestion(currentQuestions.length - 1);
         }
-    });
-
-    settingsForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const backgroundColor = backgroundColorInput.value;
-        const opacity = opacityInput.value;
-        const rgbaColor = hexToRGBA(backgroundColor, opacity);
-        const font = fontInput.value;
-        const fontSize = fontSizeInput.value + 'px';
-        const fontColor = fontColorInput.value;
-        
-        const newSettings = {
-            backgroundColor: rgbaColor,
-            font,
-            fontSize,
-            fontColor,
-            textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
-            shortcuts: {
-                toggleApp: toggleAppInput.value,
-                newQuestion: newQuestionInput.value,
-                exportData: exportDataInput.value,
-                importData: importDataInput.value,
-                deleteQuestion: deleteQuestionInput.value
-            }
-        };
-        
-        await window.electronAPI.updateSettings(newSettings);
-        applySettings(newSettings);
     });
 
     async function loadQuestions() {
@@ -105,9 +49,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentQuestions.length === 0) {
             questionList.innerHTML = '<p>No questions for this app yet.</p>';
         } else {
-            currentQuestions.forEach((qa) => {
+            currentQuestions.forEach((qa, index) => {
                 const li = document.createElement('li');
                 li.innerHTML = `
+                    <span class="question-number">${index + 1}</span>
                     <strong>Q: ${qa.question}</strong>
                     <p>A: ${qa.answer || 'Not answered yet'}</p>
                     <div class="question-actions">
@@ -115,6 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="delete-btn" data-id="${qa.id}">Delete</button>
                     </div>
                 `;
+                li.setAttribute('tabindex', '0');
+                li.dataset.id = qa.id;
                 questionList.appendChild(li);
             });
 
@@ -129,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadSettings() {
-        const settings = await window.electronAPI.getSettings();
+        settings = await window.electronAPI.getSettings();
         applySettings(settings);
     }
 
@@ -139,27 +86,18 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.style.fontSize = settings.fontSize;
         document.body.style.color = settings.fontColor;
         document.body.style.textShadow = settings.textShadow;
-
-        const rgbaValues = settings.backgroundColor.match(/[\d.]+/g);
-        if (rgbaValues && rgbaValues.length === 4) {
-            backgroundColorInput.value = rgbaToHex(rgbaValues[0], rgbaValues[1], rgbaValues[2]);
-            opacityInput.value = rgbaValues[3];
-        }
-        fontInput.value = settings.font;
-        fontSizeInput.value = parseInt(settings.fontSize);
-        fontColorInput.value = settings.fontColor;
-
-        // Set shortcut input values
-        toggleAppInput.value = settings.shortcuts.toggleApp;
-        newQuestionInput.value = settings.shortcuts.newQuestion;
-        exportDataInput.value = settings.shortcuts.exportData;
-        importDataInput.value = settings.shortcuts.importData;
-        deleteQuestionInput.value = settings.shortcuts.deleteQuestion;
     }
 
     async function updateLastUsedApp() {
         const lastUsedApp = await window.electronAPI.getLastUsedApp();
         lastUsedAppDiv.textContent = `Last Used App: ${lastUsedApp || 'None'}`;
+    }
+
+    function focusQuestion(index) {
+        if (index >= 0 && index < currentQuestions.length) {
+            focusedQuestionIndex = index;
+            questionList.children[index].focus();
+        }
     }
 
     async function editQuestion(id) {
@@ -169,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
             answerInput.value = qa.answer || '';
             editingId = qa.id;
             submitBtn.textContent = 'Update Question';
-            focusOnNewQuestion();
+            questionInput.focus();
         }
     }
 
@@ -178,45 +116,41 @@ document.addEventListener('DOMContentLoaded', () => {
         loadQuestions();
     }
 
-    async function deleteLastQuestion() {
-        if (currentQuestions.length > 0) {
-            const lastQuestion = currentQuestions[currentQuestions.length - 1];
-            await deleteQuestion(lastQuestion.id);
+    document.addEventListener('keydown', (e) => {
+        const now = Date.now();
+        const isShortcutKey = (e.key >= '1' && e.key <= '9') || 
+                              (e.key === 'q' || e.key === 'a' || e.key === 'd') ||
+                              (e.key === 'N' && e.shiftKey);
+        const isInputField = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+
+        if (isShortcutKey && !isInputField) {
+            e.preventDefault(); // Prevent default behavior for shortcut keys only when not in input fields
+            
+            if (now - lastKeyPressTime < 250) {
+                return; // Ignore key presses within 250ms of a shortcut
+            }
+
+            if (e.key >= '1' && e.key <= '9') {
+                const index = parseInt(e.key) - 1;
+                focusQuestion(index);
+            } else if (e.key === 'q' && document.activeElement.tagName === 'LI') {
+                const id = document.activeElement.dataset.id;
+                editQuestion(id);
+                setTimeout(() => questionInput.focus(), 0);
+            } else if (e.key === 'a' && document.activeElement.tagName === 'LI') {
+                const id = document.activeElement.dataset.id;
+                editQuestion(id);
+                setTimeout(() => answerInput.focus(), 0);
+            } else if (e.key === 'd' && document.activeElement.tagName === 'LI') {
+                const id = document.activeElement.dataset.id;
+                deleteQuestion(id);
+            } else if (e.key === 'N' && e.shiftKey) {
+                questionInput.focus();
+            }
+
+            lastKeyPressTime = now;
+        } else if (e.key === 'Escape') {
+            document.activeElement.blur();
         }
-    }
-
-    async function exportData() {
-        const result = await window.electronAPI.exportData();
-        if (result.success) {
-            alert('Data exported successfully');
-        } else {
-            alert(`Failed to export data: ${result.message}`);
-        }
-    }
-
-    async function importData() {
-        const result = await window.electronAPI.importData();
-        if (result.success) {
-            alert('Data imported successfully');
-            loadQuestions();
-        } else {
-            alert(`Failed to import data: ${result.message}`);
-        }
-    }
-
-    function hexToRGBA(hex, opacity) {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    }
-
-    function rgbaToHex(r, g, b) {
-        return "#" + ((1 << 24) + (parseInt(r) << 16) + (parseInt(g) << 8) + parseInt(b)).toString(16).slice(1);
-    }
-
-    function focusOnNewQuestion() {
-        questionInput.focus();
-        questionInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    });
 });
