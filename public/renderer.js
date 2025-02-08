@@ -5,12 +5,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const questionList = document.getElementById('questionList');
     const submitBtn = document.getElementById('submitBtn');
     const lastUsedAppDiv = document.getElementById('lastUsedApp');
+    const settingsBtn = document.getElementById('settingsBtn');
 
     let editingId = null;
     let currentQuestions = [];
-    let focusedQuestionIndex = -1;
-    let settings = {};
-    let lastKeyPressTime = 0;
+    let isEditing = false;
+    let settingsModal = null;
 
     // Load existing questions and settings
     loadQuestions();
@@ -23,8 +23,43 @@ document.addEventListener('DOMContentLoaded', () => {
         loadQuestions();
     });
 
+    settingsBtn.addEventListener('click', () => {
+        if (!settingsModal) {
+            settingsModal = new SettingsModal();
+        }
+        settingsModal.show();
+    });
+
     questionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        await addOrUpdateQuestion();
+    });
+
+    answerInput.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            await addOrUpdateQuestion();
+        }
+    });
+
+    // Track focus state of input fields
+    questionInput.addEventListener('focus', () => {
+        isEditing = true;
+    });
+
+    answerInput.addEventListener('focus', () => {
+        isEditing = true;
+    });
+
+    questionInput.addEventListener('blur', () => {
+        isEditing = false;
+    });
+
+    answerInput.addEventListener('blur', () => {
+        isEditing = false;
+    });
+
+    async function addOrUpdateQuestion() {
         const question = questionInput.value.trim();
         const answer = answerInput.value.trim();
 
@@ -39,9 +74,16 @@ document.addEventListener('DOMContentLoaded', () => {
             questionInput.value = '';
             answerInput.value = '';
             await loadQuestions();
-            focusQuestion(currentQuestions.length - 1);
+            // Focus the last added/edited question
+            if (currentQuestions.length > 0) {
+                const lastIndex = currentQuestions.length - 1;
+                const lastQuestion = questionList.children[lastIndex];
+                if (lastQuestion) {
+                    lastQuestion.focus();
+                }
+            }
         }
-    });
+    }
 
     async function loadQuestions() {
         currentQuestions = await window.electronAPI.getQuestions();
@@ -65,7 +107,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 questionList.appendChild(li);
             });
 
-            // Add event listeners for edit and delete buttons
             document.querySelectorAll('.edit-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => editQuestion(e.target.dataset.id));
             });
@@ -76,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadSettings() {
-        settings = await window.electronAPI.getSettings();
+        const settings = await window.electronAPI.getSettings();
         applySettings(settings);
     }
 
@@ -91,13 +132,6 @@ document.addEventListener('DOMContentLoaded', () => {
     async function updateLastUsedApp() {
         const lastUsedApp = await window.electronAPI.getLastUsedApp();
         lastUsedAppDiv.textContent = `Last Used App: ${lastUsedApp || 'None'}`;
-    }
-
-    function focusQuestion(index) {
-        if (index >= 0 && index < currentQuestions.length) {
-            focusedQuestionIndex = index;
-            questionList.children[index].focus();
-        }
     }
 
     async function editQuestion(id) {
@@ -117,40 +151,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.addEventListener('keydown', (e) => {
-        const now = Date.now();
-        const isShortcutKey = (e.key >= '1' && e.key <= '9') || 
-                              (e.key === 'q' || e.key === 'a' || e.key === 'd') ||
-                              (e.key === 'N' && e.shiftKey);
-        const isInputField = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+        // Don't process shortcuts if we're editing
+        if (isEditing) {
+            return;
+        }
 
-        if (isShortcutKey && !isInputField) {
-            e.preventDefault(); // Prevent default behavior for shortcut keys only when not in input fields
-            
-            if (now - lastKeyPressTime < 250) {
-                return; // Ignore key presses within 250ms of a shortcut
+        if (e.key >= '1' && e.key <= '4') {
+            e.preventDefault();
+            const index = parseInt(e.key) - 1;
+            if (index < currentQuestions.length) {
+                const li = questionList.children[index];
+                li.focus();
             }
-
-            if (e.key >= '1' && e.key <= '9') {
-                const index = parseInt(e.key) - 1;
-                focusQuestion(index);
-            } else if (e.key === 'q' && document.activeElement.tagName === 'LI') {
-                const id = document.activeElement.dataset.id;
-                editQuestion(id);
-                setTimeout(() => questionInput.focus(), 0);
-            } else if (e.key === 'a' && document.activeElement.tagName === 'LI') {
-                const id = document.activeElement.dataset.id;
-                editQuestion(id);
-                setTimeout(() => answerInput.focus(), 0);
-            } else if (e.key === 'd' && document.activeElement.tagName === 'LI') {
-                const id = document.activeElement.dataset.id;
-                deleteQuestion(id);
-            } else if (e.key === 'N' && e.shiftKey) {
-                questionInput.focus();
-            }
-
-            lastKeyPressTime = now;
+        } else if (e.key === 'q' && document.activeElement.tagName === 'LI') {
+            e.preventDefault();
+            const id = document.activeElement.dataset.id;
+            editQuestion(parseInt(id));
+        } else if (e.key === 'a' && document.activeElement.tagName === 'LI') {
+            e.preventDefault();
+            const id = document.activeElement.dataset.id;
+            editQuestion(parseInt(id));
+            setTimeout(() => answerInput.focus(), 0);
+        } else if (e.key === 'd' && document.activeElement.tagName === 'LI') {
+            e.preventDefault();
+            const id = document.activeElement.dataset.id;
+            deleteQuestion(parseInt(id));
         } else if (e.key === 'Escape') {
             document.activeElement.blur();
+        } else if (e.key === 'N' && e.shiftKey) {
+            e.preventDefault();
+            questionInput.focus();
         }
+    });
+
+    window.electronAPI.onFocusNewQuestion(() => {
+        questionInput.focus();
     });
 });

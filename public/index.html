@@ -4,23 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QA-Panel</title>
+    <link rel="stylesheet" href="styles/settings.css">
+    <link rel="stylesheet" href="styles/shortcuts.css">
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: rgba(128, 128, 128, 0.5);
-            color: white;
+            background-color: rgba(28, 28, 28, 0.9);
+            color: #ffffff;
         }
         .container {
             max-width: 800px;
             margin: 0 auto;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(40, 40, 40, 0.9);
             padding: 20px;
             border-radius: 8px;
         }
         h1, h2 {
             text-align: center;
+            color: #ffa500;
         }
         form {
             display: flex;
@@ -28,46 +31,55 @@
             gap: 10px;
             margin-bottom: 20px;
         }
-        input, textarea, select {
-            padding: 5px;
+        input, textarea {
+            padding: 10px;
             font-size: 16px;
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white;
+            background-color: rgba(60, 60, 60, 0.9);
+            color: #ffffff;
             border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #ffa500;
         }
         button {
             padding: 10px;
-            background-color: #4CAF50;
-            color: white;
+            background-color: #ffa500;
+            color: #000000;
             border: none;
             cursor: pointer;
             font-size: 16px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
         }
         button:hover {
-            background-color: #45a049;
+            background-color: #ffb52e;
         }
         #questionList {
             list-style-type: none;
             padding: 0;
         }
         #questionList li {
-            background-color: rgba(255, 255, 255, 0.1);
+            background-color: rgba(60, 60, 60, 0.9);
             margin-bottom: 10px;
-            padding: 10px;
+            padding: 15px;
             border-radius: 4px;
             position: relative;
         }
         #questionList li:focus {
-            outline: 2px solid #4CAF50;
-            background-color: rgba(255, 255, 255, 0.2);
+            outline: 2px solid #ffa500;
+            background-color: rgba(80, 80, 80, 0.9);
         }
         .question-number {
             position: absolute;
             left: -30px;
             top: 50%;
             transform: translateY(-50%);
-            background-color: #4CAF50;
-            color: white;
+            background-color: #ffa500;
+            color: #000000;
             width: 24px;
             height: 24px;
             border-radius: 50%;
@@ -87,30 +99,60 @@
             font-size: 14px;
         }
         .edit-btn {
-            background-color: #2196F3;
+            background-color: #4CAF50;
         }
         .delete-btn {
             background-color: #f44336;
         }
-        #settingsForm {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.3);
+        #lastUsedApp {
+            text-align: center;
+            margin-bottom: 20px;
+            font-style: italic;
+            color: #ffa500;
+        }
+        .settings-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .settings-button:hover {
+            border-color: #ffa500;
+            color: #ffa500;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <button class="settings-button" id="settingsBtn">⚙️ Settings</button>
         <h1>QA-Panel</h1>
         <div id="lastUsedApp">Last Used App: Loading...</div>
         <form id="questionForm">
             <input type="text" id="questionInput" placeholder="Enter your question" required>
-            <textarea id="answerInput" placeholder="Enter the answer (optional)"></textarea>
+            <textarea id="answerInput" placeholder="Enter the answer (optional)" rows="3"></textarea>
             <button type="submit" id="submitBtn">Add Question</button>
         </form>
         <h2>Questions and Answers:</h2>
         <ul id="questionList"></ul>
     </div>
+    <script src="components/SettingsModal.js"></script>
     <script src="renderer.js"></script>
 </body>
 </html>

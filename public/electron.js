@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, dialog, nativeImage, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, dialog, screen } = require('electron');
 const path = require('path');
 const url = require('url');
 const isDev = require('electron-is-dev');
@@ -6,271 +6,241 @@ const log = require('electron-log');
 const fs = require('fs');
 const activeWin = require('active-win');
 
-console.log('Starting Electron application...');
+log.transports.file.level = 'info';
+log.transports.console.level = 'info';
 
 let mainWindow;
 let tray;
 let isQuitting = false;
 
-// Store questions and answers
 let qaList = [];
-
-// Store settings
 let settings = {
-  backgroundColor: 'rgba(128, 128, 128, 0.5)', // Default gray with 50% opacity
-  lastUsedApp: '',
-  font: 'Arial',
-  fontSize: '16px',
-  fontColor: '#ffffff',
-  textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
-  shortcuts: {
-    toggleApp: 'CommandOrControl+Shift+Space',
-    newQuestion: 'CommandOrControl+Shift+N',
-    exportData: 'CommandOrControl+Shift+E',
-    importData: 'CommandOrControl+Shift+I'
-  }
+    backgroundColor: 'rgba(128, 128, 128, 0.5)',
+    lastUsedApp: '',
+    font: 'Arial',
+    fontSize: '16px',
+    fontColor: '#ffffff',
+    textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+    shortcuts: {
+        toggleApp: 'Shift+Space',
+        newQuestion: 'Shift+N',
+        exportData: 'Ctrl+Shift+E',
+        importData: 'Ctrl+Shift+I'
+    }
 };
 
-// File paths for persistent storage
 const dataFilePath = path.join(app.getPath('userData'), 'qa-data.json');
 const settingsFilePath = path.join(app.getPath('userData'), 'settings.json');
 
-console.log('Data file path:', dataFilePath);
-console.log('Settings file path:', settingsFilePath);
-
-// Load data from file
 function loadData() {
-  console.log('Loading data...');
-  try {
-    if (fs.existsSync(dataFilePath)) {
-      const data = fs.readFileSync(dataFilePath, 'utf-8');
-      qaList = JSON.parse(data);
-      console.log('Data loaded successfully');
-    } else {
-      console.log('No existing data file found');
+    try {
+        if (fs.existsSync(dataFilePath)) {
+            qaList = JSON.parse(fs.readFileSync(dataFilePath, 'utf-8'));
+        }
+        if (fs.existsSync(settingsFilePath)) {
+            settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsFilePath, 'utf-8')) };
+        }
+    } catch (error) {
+        log.error('Error loading data:', error);
     }
-    if (fs.existsSync(settingsFilePath)) {
-      const data = fs.readFileSync(settingsFilePath, 'utf-8');
-      settings = { ...settings, ...JSON.parse(data) };
-      console.log('Settings loaded successfully');
-    } else {
-      console.log('No existing settings file found');
-    }
-  } catch (error) {
-    console.error('Error loading data:', error);
-  }
 }
 
-// Save data to file
 function saveData() {
-  console.log('Saving data...');
-  try {
-    fs.writeFileSync(dataFilePath, JSON.stringify(qaList), 'utf-8');
-    fs.writeFileSync(settingsFilePath, JSON.stringify(settings), 'utf-8');
-    console.log('Data and settings saved successfully');
-  } catch (error) {
-    console.error('Error saving data:', error);
-  }
+    try {
+        fs.writeFileSync(dataFilePath, JSON.stringify(qaList), 'utf-8');
+        fs.writeFileSync(settingsFilePath, JSON.stringify(settings), 'utf-8');
+    } catch (error) {
+        log.error('Error saving data:', error);
+    }
 }
 
 function createWindow() {
-  console.log('Creating window...');
-  try {
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
     mainWindow = new BrowserWindow({
-      width: width,
-      height: height,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        preload: path.join(__dirname, 'preload.js')
-      },
-      show: false,
-      frame: false,
-      transparent: true,
-      icon: path.join(__dirname, 'app-icon.png')
+        width: width,
+        height: height,
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            preload: path.join(__dirname, 'preload.js')
+        },
+        show: false,
+        frame: false,
+        transparent: true,
     });
 
-    const startUrl = url.format({
-      pathname: path.join(__dirname, 'index.html'),
-      protocol: 'file:',
-      slashes: true
-    });
+    mainWindow.loadURL(url.format({
+        pathname: path.join(__dirname, 'index.html'),
+        protocol: 'file:',
+        slashes: true
+    }));
 
-    console.log('Loading URL:', startUrl);
-    mainWindow.loadURL(startUrl)
-      .then(() => {
-        console.log('URL loaded successfully');
-      })
-      .catch(error => {
-        console.error('Failed to load URL:', error);
-        dialog.showErrorBox('Application Error', `Failed to load the application. Error: ${error.message}`);
-      });
-
-    if (isDev) {
-      console.log('Opening DevTools');
-      mainWindow.webContents.openDevTools();
-    }
-
-    mainWindow.on('ready-to-show', () => {
-      console.log('Window ready to show');
-      mainWindow.show();
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show();
     });
 
     mainWindow.on('close', (event) => {
-      if (!isQuitting) {
-        console.log('Preventing window close');
-        event.preventDefault();
-        mainWindow.hide();
-      }
+        if (!isQuitting) {
+            event.preventDefault();
+            mainWindow.hide();
+        }
     });
 
-    mainWindow.on('closed', () => {
-      console.log('Window closed');
-      mainWindow = null;
-    });
-
-    console.log('Window created successfully');
-    return mainWindow;
-  } catch (error) {
-    console.error('Error creating window:', error);
-    dialog.showErrorBox('Application Error', `Failed to create the application window. Error: ${error.message}`);
-    app.quit();
-  }
+    if (isDev) {
+        mainWindow.webContents.openDevTools();
+    }
 }
 
 function createTray() {
-  console.log('Creating tray...');
-  tray = new Tray(path.join(__dirname, 'tray-icon.png'));
-  const contextMenu = Menu.buildFromTemplate([
-    { label: 'Show App', click: () => mainWindow.show() },
-    { label: 'Quit', click: () => app.quit() }
-  ]);
-  tray.setToolTip('QA Panel');
-  tray.setContextMenu(contextMenu);
-  tray.on('click', () => mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show());
-  console.log('Tray created successfully');
+    tray = new Tray(path.join(__dirname, 'tray-icon.png'));
+    const contextMenu = Menu.buildFromTemplate([
+        { label: 'Show App', click: () => mainWindow.show() },
+        { label: 'Quit', click: () => { isQuitting = true; app.quit(); } }
+    ]);
+    tray.setToolTip('QA Panel');
+    tray.setContextMenu(contextMenu);
+}
+
+function unregisterAllShortcuts() {
+    globalShortcut.unregisterAll();
 }
 
 function setupGlobalShortcuts() {
-  console.log('Setting up global shortcuts...');
-  Object.entries(settings.shortcuts).forEach(([action, shortcut]) => {
-    globalShortcut.register(shortcut, () => {
-      switch (action) {
-        case 'toggleApp':
-          if (mainWindow.isVisible()) {
-            mainWindow.hide();
-          } else {
-            updateLastUsedApp();
+    log.info('Setting up global shortcuts...');
+    try {
+        // First unregister all existing shortcuts
+        unregisterAllShortcuts();
+
+        // Register new shortcuts
+        globalShortcut.register(settings.shortcuts.toggleApp, () => {
+            if (mainWindow.isVisible()) {
+                mainWindow.hide();
+            } else {
+                updateLastUsedApp();
+                mainWindow.show();
+            }
+        });
+
+        globalShortcut.register(settings.shortcuts.newQuestion, () => {
             mainWindow.show();
-          }
-          break;
-        case 'newQuestion':
-          mainWindow.webContents.send('focus-new-question');
-          break;
-        case 'exportData':
-          mainWindow.webContents.send('export-data');
-          break;
-        case 'importData':
-          mainWindow.webContents.send('import-data');
-          break;
-      }
-    });
-  });
-  console.log('Global shortcuts set up successfully');
+            mainWindow.webContents.send('focus-new-question');
+        });
+
+        globalShortcut.register(settings.shortcuts.exportData, () => {
+            mainWindow.webContents.send('export-data');
+        });
+
+        globalShortcut.register(settings.shortcuts.importData, () => {
+            mainWindow.webContents.send('import-data');
+        });
+
+        log.info('Global shortcuts set up successfully');
+    } catch (error) {
+        log.error('Error setting up global shortcuts:', error);
+    }
 }
 
 async function updateLastUsedApp() {
-  try {
-    const activeWindow = await activeWin();
-    if (activeWindow && activeWindow.owner.name !== app.getName()) {
-      settings.lastUsedApp = activeWindow.owner.name;
-      saveData();
-      mainWindow.webContents.send('update-last-used-app', settings.lastUsedApp);
+    try {
+        const activeWindow = await activeWin();
+        if (activeWindow && activeWindow.owner.name !== app.getName() && activeWindow.owner.name !== 'Electron') {
+            if (settings.lastUsedApp !== activeWindow.owner.name) {
+                settings.lastUsedApp = activeWindow.owner.name;
+                mainWindow.webContents.send('update-last-used-app', settings.lastUsedApp);
+                saveData();
+            }
+        }
+    } catch (error) {
+        log.error('Error getting active window:', error);
     }
-  } catch (error) {
-    console.error('Error getting active window:', error);
-  }
 }
 
-app.on('ready', async () => {
-  console.log('App is ready');
-  try {
+app.on('ready', () => {
     loadData();
-    mainWindow = createWindow();
+    createWindow();
     createTray();
     setupGlobalShortcuts();
-    updateLastUsedApp();
-    setupIpcHandlers();
-  } catch (error) {
-    console.error('Error in app ready handler:', error);
-    dialog.showErrorBox('Application Error', 'Failed to initialize the application. Please restart.');
-    app.quit();
-  }
+    setInterval(updateLastUsedApp, 1000);
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+    if (process.platform !== 'darwin') {
+        app.quit();
+    }
 });
 
 app.on('activate', () => {
-  if (mainWindow === null) {
-    createWindow();
-  }
+    if (mainWindow === null) {
+        createWindow();
+    }
 });
 
 app.on('before-quit', () => {
-  isQuitting = true;
+    isQuitting = true;
 });
 
-function setupIpcHandlers() {
-  ipcMain.handle('add-question', async (event, question, answer) => {
-    console.log('Adding question:', question);
+app.on('will-quit', () => {
+    unregisterAllShortcuts();
+});
+
+ipcMain.handle('get-questions', () => {
+    return qaList.filter(qa => qa.app === settings.lastUsedApp);
+});
+
+ipcMain.handle('add-question', (event, question, answer) => {
     qaList.push({ id: Date.now(), question, answer, app: settings.lastUsedApp });
     saveData();
     return qaList.filter(qa => qa.app === settings.lastUsedApp);
-  });
+});
 
-  ipcMain.handle('get-questions', () => {
-    console.log('Getting questions');
-    return qaList.filter(qa => qa.app === settings.lastUsedApp);
-  });
-
-  ipcMain.handle('update-question', (event, id, question, answer) => {
-    console.log('Updating question:', id);
-    const index = qaList.findIndex(qa => qa.id === id);
+ipcMain.handle('update-question', (event, id, question, answer) => {
+    const index = qaList.findIndex(q => q.id === id);
     if (index !== -1) {
-      qaList[index] = { ...qaList[index], question, answer };
-      saveData();
+        qaList[index] = { ...qaList[index], question, answer };
+        saveData();
     }
     return qaList.filter(qa => qa.app === settings.lastUsedApp);
-  });
+});
 
-  ipcMain.handle('delete-question', (event, id) => {
-    console.log('Deleting question:', id);
-    qaList = qaList.filter(qa => qa.id !== id);
+ipcMain.handle('delete-question', (event, id) => {
+    qaList = qaList.filter(q => q.id !== id);
     saveData();
     return qaList.filter(qa => qa.app === settings.lastUsedApp);
-  });
+});
 
-  ipcMain.handle('get-settings', () => {
-    console.log('Getting settings');
+ipcMain.handle('get-settings', () => {
     return settings;
-  });
+});
 
-  ipcMain.handle('update-settings', (event, newSettings) => {
-    console.log('Updating settings:', newSettings);
+ipcMain.handle('update-settings', (event, newSettings) => {
     settings = { ...settings, ...newSettings };
     saveData();
-    setupGlobalShortcuts(); // Refresh shortcuts when settings are updated
+    setupGlobalShortcuts(); // Re-register shortcuts with new values
     return settings;
-  });
+});
 
-  ipcMain.handle('get-last-used-app', () => {
+ipcMain.handle('get-last-used-app', () => {
     return settings.lastUsedApp;
-  });
-}
+});
 
-console.log('Electron script loaded successfully');
+ipcMain.handle('export-data', (event, filePath) => {
+    const data = JSON.stringify({ qaList, settings }, null, 2);
+    fs.writeFileSync(filePath, data, 'utf-8');
+});
+
+ipcMain.handle('import-data', (event, filePath) => {
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    qaList = data.qaList || [];
+    settings = { ...settings, ...data.settings };
+    saveData();
+    setupGlobalShortcuts(); // Re-register shortcuts after import
+    return { qaList, settings };
+});
+
+ipcMain.handle('show-save-dialog', (event, options) => {
+    return dialog.showSaveDialog(options);
+});
+
+ipcMain.handle('show-open-dialog', (event, options) => {
+    return dialog.showOpenDialog(options);
+});
