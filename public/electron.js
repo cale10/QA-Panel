@@ -26,6 +26,12 @@ let settings = {
         newQuestion: 'Shift+N',
         exportData: 'Ctrl+Shift+E',
         importData: 'Ctrl+Shift+I'
+    },
+    ai: {
+        enabled: false,
+        model: 'llama2',
+        autoAnswer: false,
+        temperature: 0.7
     }
 };
 
@@ -101,15 +107,11 @@ function createTray() {
     tray.setContextMenu(contextMenu);
 }
 
-function unregisterAllShortcuts() {
-    globalShortcut.unregisterAll();
-}
-
 function setupGlobalShortcuts() {
     log.info('Setting up global shortcuts...');
     try {
         // First unregister all existing shortcuts
-        unregisterAllShortcuts();
+        globalShortcut.unregisterAll();
 
         // Register new shortcuts
         globalShortcut.register(settings.shortcuts.toggleApp, () => {
@@ -180,7 +182,7 @@ app.on('before-quit', () => {
 });
 
 app.on('will-quit', () => {
-    unregisterAllShortcuts();
+    globalShortcut.unregisterAll();
 });
 
 ipcMain.handle('get-questions', () => {
@@ -188,15 +190,26 @@ ipcMain.handle('get-questions', () => {
 });
 
 ipcMain.handle('add-question', (event, question, answer) => {
-    qaList.push({ id: Date.now(), question, answer, app: settings.lastUsedApp });
+    qaList.push({ 
+        id: Date.now(), 
+        question, 
+        answer, 
+        app: settings.lastUsedApp,
+        isAIGenerated: answer && settings.ai?.enabled
+    });
     saveData();
     return qaList.filter(qa => qa.app === settings.lastUsedApp);
 });
 
-ipcMain.handle('update-question', (event, id, question, answer) => {
+ipcMain.handle('update-question', (event, id, question, answer, isAIGenerated = false) => {
     const index = qaList.findIndex(q => q.id === id);
     if (index !== -1) {
-        qaList[index] = { ...qaList[index], question, answer };
+        qaList[index] = { 
+            ...qaList[index], 
+            question, 
+            answer,
+            isAIGenerated: isAIGenerated || (qaList[index].isAIGenerated && answer === qaList[index].answer)
+        };
         saveData();
     }
     return qaList.filter(qa => qa.app === settings.lastUsedApp);

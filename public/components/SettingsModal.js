@@ -3,13 +3,12 @@ class SettingsModal {
         this.modal = document.createElement('div');
         this.modal.className = 'modal-overlay';
         this.isVisible = false;
-        this.activeShortcutInput = null;
-        this.currentKeys = new Set();
+        this.activeTab = 'appearance';
+        this.aiSettings = new AISettings();
         this.createModal();
     }
 
     createModal() {
-        // ... (previous HTML content remains the same until the end of setupEventListeners)
         this.modal.innerHTML = `
             <div class="settings-modal">
                 <div class="modal-header">
@@ -20,6 +19,7 @@ class SettingsModal {
                 <div class="settings-tabs">
                     <button class="tab-button active" data-tab="appearance">Appearance</button>
                     <button class="tab-button" data-tab="shortcuts">Keyboard Shortcuts</button>
+                    <button class="tab-button" data-tab="ai">AI Features</button>
                 </div>
 
                 <div class="settings-content">
@@ -80,6 +80,8 @@ class SettingsModal {
                             </div>
                         </div>
                     </div>
+
+                    <div class="tab-panel" id="aiPanel"></div>
                 </div>
 
                 <div class="modal-footer">
@@ -88,6 +90,10 @@ class SettingsModal {
                 </div>
             </div>
         `;
+
+        // Add AI settings panel
+        const aiPanel = this.modal.querySelector('#aiPanel');
+        aiPanel.appendChild(this.aiSettings.getElement());
 
         this.setupEventListeners();
     }
@@ -120,82 +126,6 @@ class SettingsModal {
                 this.resetShortcut(shortcutName, shortcutInput);
             });
         });
-
-        // Global keydown/keyup handlers for shortcut capture
-        document.addEventListener('keydown', this.handleKeyDown.bind(this));
-        document.addEventListener('keyup', this.handleKeyUp.bind(this));
-    }
-
-    handleKeyDown(e) {
-        if (!this.activeShortcutInput) return;
-
-        e.preventDefault();
-        
-        // Add the key to our set
-        if (e.key === 'Control') this.currentKeys.add('Ctrl');
-        else if (e.key === 'Shift') this.currentKeys.add('Shift');
-        else if (e.key === 'Alt') this.currentKeys.add('Alt');
-        else if (!['Control', 'Shift', 'Alt'].includes(e.key)) {
-            // Capitalize first letter of key for better display
-            const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
-            this.currentKeys.add(key);
-        }
-
-        // Update the display
-        this.updateShortcutDisplay();
-    }
-
-    handleKeyUp(e) {
-        if (!this.activeShortcutInput) return;
-
-        // If it's not a modifier key and we have a combination, complete the capture
-        if (!['Control', 'Shift', 'Alt'].includes(e.key)) {
-            this.completeShortcutCapture();
-        } else {
-            // Remove the modifier key from our set
-            if (e.key === 'Control') this.currentKeys.delete('Ctrl');
-            else if (e.key === 'Shift') this.currentKeys.delete('Shift');
-            else if (e.key === 'Alt') this.currentKeys.delete('Alt');
-            this.updateShortcutDisplay();
-        }
-    }
-
-    updateShortcutDisplay() {
-        if (this.activeShortcutInput) {
-            const keys = Array.from(this.currentKeys);
-            this.activeShortcutInput.textContent = keys.length > 0 ? keys.join('+') : 'Press shortcut...';
-        }
-    }
-
-    startShortcutCapture(input) {
-        if (this.activeShortcutInput) {
-            this.stopShortcutCapture();
-        }
-        
-        this.activeShortcutInput = input;
-        this.currentKeys.clear();
-        input.textContent = 'Press shortcut...';
-        input.classList.add('capturing');
-    }
-
-    stopShortcutCapture() {
-        if (this.activeShortcutInput) {
-            this.activeShortcutInput.classList.remove('capturing');
-            if (this.currentKeys.size === 0) {
-                // Restore the previous value if no new shortcut was set
-                this.loadCurrentSettings();
-            }
-            this.activeShortcutInput = null;
-            this.currentKeys.clear();
-        }
-    }
-
-    completeShortcutCapture() {
-        if (this.activeShortcutInput && this.currentKeys.size > 0) {
-            const shortcut = Array.from(this.currentKeys).join('+');
-            this.activeShortcutInput.textContent = shortcut;
-            this.stopShortcutCapture();
-        }
     }
 
     switchTab(tabName) {
@@ -209,6 +139,8 @@ class SettingsModal {
         panels.forEach(panel => {
             panel.classList.toggle('active', panel.id === `${tabName}Panel`);
         });
+
+        this.activeTab = tabName;
     }
 
     async show() {
@@ -245,6 +177,11 @@ class SettingsModal {
                 input.textContent = value;
             }
         });
+
+        // Load AI settings
+        if (settings.ai) {
+            this.aiSettings.setSettings(settings.ai);
+        }
     }
 
     async saveSettings() {
@@ -257,7 +194,8 @@ class SettingsModal {
             font: this.modal.querySelector('#fontFamilyInput').value,
             fontSize: this.modal.querySelector('#fontSizeInput').value,
             fontColor: this.modal.querySelector('#textColorInput').value,
-            shortcuts: {}
+            shortcuts: {},
+            ai: this.aiSettings.getSettings()
         };
 
         // Save shortcuts

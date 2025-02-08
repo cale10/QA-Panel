@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentQuestions = [];
     let isEditing = false;
     let settingsModal = null;
+    let ollamaService = new OllamaService();
 
     // Load existing questions and settings
     loadQuestions();
@@ -69,7 +70,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 editingId = null;
                 submitBtn.textContent = 'Add Question';
             } else {
-                await window.electronAPI.addQuestion(question, answer);
+                const settings = await window.electronAPI.getSettings();
+                let finalAnswer = answer;
+
+                // Auto-generate answer if enabled and no answer provided
+                if (settings.ai?.enabled && settings.ai?.autoAnswer && !answer) {
+                    try {
+                        const prompt = ollamaService.createPrompt(settings.lastUsedApp, question);
+                        finalAnswer = await ollamaService.generateAnswer(settings.ai.model, prompt);
+                    } catch (error) {
+                        console.error('Error generating AI answer:', error);
+                    }
+                }
+
+                await window.electronAPI.addQuestion(question, finalAnswer);
             }
             questionInput.value = '';
             answerInput.value = '';
@@ -98,21 +112,58 @@ document.addEventListener('DOMContentLoaded', () => {
                     <strong>Q: ${qa.question}</strong>
                     <p>A: ${qa.answer || 'Not answered yet'}</p>
                     <div class="question-actions">
+                        ${!qa.answer ? `<button class="ai-answer-btn" data-id="${qa.id}">🤖 Generate Answer</button>` : ''}
                         <button class="edit-btn" data-id="${qa.id}">Edit</button>
                         <button class="delete-btn" data-id="${qa.id}">Delete</button>
                     </div>
+                    ${qa.isAIGenerated ? '<span class="ai-generated-badge">🤖 AI Generated</span>' : ''}
                 `;
                 li.setAttribute('tabindex', '0');
                 li.dataset.id = qa.id;
                 questionList.appendChild(li);
             });
 
+            // Add event listeners for buttons
             document.querySelectorAll('.edit-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => editQuestion(e.target.dataset.id));
             });
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => deleteQuestion(e.target.dataset.id));
             });
+            document.querySelectorAll('.ai-answer-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => generateAnswer(e.target.dataset.id));
+            });
+        }
+    }
+
+    async function generateAnswer(id) {
+        const qa = currentQuestions.find(q => q.id === parseInt(id));
+        if (!qa) return;
+
+        const button = document.querySelector(`.ai-answer-btn[data-id="${id}"]`);
+        if (!button) return;
+
+        try {
+            button.disabled = true;
+            button.classList.add('loading');
+            button.textContent = '🤖 Generating...';
+
+            const settings = await window.electronAPI.getSettings();
+            if (!settings.ai?.enabled) {
+                throw new Error('AI features are not enabled');
+            }
+
+            const prompt = ollamaService.createPrompt(settings.lastUsedApp, qa.question);
+            const answer = await ollamaService.generateAnswer(settings.ai.model, prompt);
+
+            await window.electronAPI.updateQuestion(parseInt(id), qa.question, answer, true);
+            await loadQuestions();
+        } catch (error) {
+            console.error('Error generating answer:', error);
+            button.textContent = '🤖 Error - Try Again';
+        } finally {
+            button.disabled = false;
+            button.classList.remove('loading');
         }
     }
 

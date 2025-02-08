@@ -4,7 +4,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Question management
     addQuestion: (question, answer) => ipcRenderer.invoke('add-question', question, answer),
     getQuestions: () => ipcRenderer.invoke('get-questions'),
-    updateQuestion: (id, question, answer) => ipcRenderer.invoke('update-question', id, question, answer),
+    updateQuestion: (id, question, answer, isAIGenerated = false) => 
+        ipcRenderer.invoke('update-question', id, question, answer, isAIGenerated),
     deleteQuestion: (id) => ipcRenderer.invoke('delete-question', id),
     
     // Settings management
