@@ -5,9 +5,12 @@ const isDev = require('electron-is-dev');
 const log = require('electron-log');
 const fs = require('fs');
 const activeWin = require('active-win');
+const fetch = require('node-fetch');
 
 log.transports.file.level = 'info';
 log.transports.console.level = 'info';
+
+const OLLAMA_API = 'http://127.0.0.1:11434/api'; // Changed from localhost to 127.0.0.1
 
 let mainWindow;
 let tray;
@@ -29,22 +32,134 @@ let settings = {
     },
     ai: {
         enabled: false,
-        model: 'llama2',
+        model: 'llama3.2',
+        visionModel: 'llava:latest',
         autoAnswer: false,
-        temperature: 0.7
+        temperature: 0.7,
+        useVision: false,
+        promptTemplate: `System: You are an expert in {app_name} and software applications.
+
+{if context_enabled}Previous Interactions (Sorted by {sort_method}):
+{previous_qa}{/if}
+
+Current Context:
+{if screenshot}[Visual analysis of current screen]{/if}
+
+Question: {question}
+
+Instructions:
+- {if context_enabled}Consider the previous Q&As shown above
+- Reference previous answers if they apply
+- {/if}Provide a clear and concise answer
+- Focus on practical solutions`,
+        contextMemory: {
+            enabled: true,
+            limit: 5,
+            sortByRelevance: false
+        }
     }
 };
 
 const dataFilePath = path.join(app.getPath('userData'), 'qa-data.json');
 const settingsFilePath = path.join(app.getPath('userData'), 'settings.json');
 
+// Ollama API handlers
+async function ollamaIsRunning() {
+    try {
+        const response = await fetch(`${OLLAMA_API}/tags`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        return response.ok;
+    } catch (error) {
+        log.error('Error checking Ollama status:', error);
+        return false;
+    }
+}
+
+async function ollamaListModels() {
+    try {
+        const response = await fetch(`${OLLAMA_API}/tags`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data.models || [];
+    } catch (error) {
+        log.error('Error listing models:', error);
+        throw error;
+    }
+}
+
+async function ollamaGenerateAnswer(model, prompt, imageData = null) {
+    try {
+        const body = {
+            model: model,
+            prompt: prompt,
+            stream: false,
+            options: {
+                temperature: settings.ai.temperature
+            }
+        };
+
+        if (imageData && model.toLowerCase().includes('llava')) {
+            body.images = [imageData];
+        }
+
+        const response = await fetch(`${OLLAMA_API}/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        }
+
+        const data = await response.json();
+        return data.response;
+    } catch (error) {
+        log.error('Error generating answer:', error);
+        throw error;
+    }
+}
+
 function loadData() {
     try {
         if (fs.existsSync(dataFilePath)) {
             qaList = JSON.parse(fs.readFileSync(dataFilePath, 'utf-8'));
+            // Add isAIGenerated flag if it doesn't exist
+            qaList = qaList.map(qa => ({
+                ...qa,
+                isAIGenerated: qa.isAIGenerated || false,
+                referencesContext: qa.referencesContext || false
+            }));
         }
         if (fs.existsSync(settingsFilePath)) {
-            settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsFilePath, 'utf-8')) };
+            const loadedSettings = JSON.parse(fs.readFileSync(settingsFilePath, 'utf-8'));
+            // Deep merge settings to preserve new fields
+            settings = {
+                ...settings,
+                ...loadedSettings,
+                ai: {
+                    ...settings.ai,
+                    ...(loadedSettings.ai || {}),
+                    contextMemory: {
+                        ...settings.ai.contextMemory,
+                        ...(loadedSettings.ai?.contextMemory || {})
+                    }
+                }
+            };
         }
     } catch (error) {
         log.error('Error loading data:', error);
@@ -53,8 +168,8 @@ function loadData() {
 
 function saveData() {
     try {
-        fs.writeFileSync(dataFilePath, JSON.stringify(qaList), 'utf-8');
-        fs.writeFileSync(settingsFilePath, JSON.stringify(settings), 'utf-8');
+        fs.writeFileSync(dataFilePath, JSON.stringify(qaList, null, 2), 'utf-8');
+        fs.writeFileSync(settingsFilePath, JSON.stringify(settings, null, 2), 'utf-8');
     } catch (error) {
         log.error('Error saving data:', error);
     }
@@ -110,10 +225,8 @@ function createTray() {
 function setupGlobalShortcuts() {
     log.info('Setting up global shortcuts...');
     try {
-        // First unregister all existing shortcuts
         globalShortcut.unregisterAll();
 
-        // Register new shortcuts
         globalShortcut.register(settings.shortcuts.toggleApp, () => {
             if (mainWindow.isVisible()) {
                 mainWindow.hide();
@@ -185,6 +298,7 @@ app.on('will-quit', () => {
     globalShortcut.unregisterAll();
 });
 
+// IPC handlers
 ipcMain.handle('get-questions', () => {
     return qaList.filter(qa => qa.app === settings.lastUsedApp);
 });
@@ -195,7 +309,8 @@ ipcMain.handle('add-question', (event, question, answer) => {
         question, 
         answer, 
         app: settings.lastUsedApp,
-        isAIGenerated: answer && settings.ai?.enabled
+        isAIGenerated: answer && settings.ai?.enabled,
+        referencesContext: false
     });
     saveData();
     return qaList.filter(qa => qa.app === settings.lastUsedApp);
@@ -208,7 +323,8 @@ ipcMain.handle('update-question', (event, id, question, answer, isAIGenerated = 
             ...qaList[index], 
             question, 
             answer,
-            isAIGenerated: isAIGenerated || (qaList[index].isAIGenerated && answer === qaList[index].answer)
+            isAIGenerated,
+            referencesContext: qaList[index].referencesContext
         };
         saveData();
     }
@@ -228,12 +344,39 @@ ipcMain.handle('get-settings', () => {
 ipcMain.handle('update-settings', (event, newSettings) => {
     settings = { ...settings, ...newSettings };
     saveData();
-    setupGlobalShortcuts(); // Re-register shortcuts with new values
+    setupGlobalShortcuts();
     return settings;
 });
 
 ipcMain.handle('get-last-used-app', () => {
     return settings.lastUsedApp;
+});
+
+ipcMain.handle('get-contextual-questions', (event, currentQuestion) => {
+    const appQuestions = qaList.filter(qa => qa.app === settings.lastUsedApp);
+    
+    if (!settings.ai?.contextMemory?.enabled || appQuestions.length === 0) {
+        return [];
+    }
+
+    let questions = [...appQuestions];
+    if (settings.ai.contextMemory.sortByRelevance) {
+        // Simple relevance sorting based on text similarity
+        const similarity = (a, b) => {
+            const aWords = new Set(a.toLowerCase().split(/\W+/));
+            const bWords = new Set(b.toLowerCase().split(/\W+/));
+            const intersection = new Set([...aWords].filter(x => bWords.has(x)));
+            return intersection.size / Math.sqrt(aWords.size * bWords.size);
+        };
+
+        questions.sort((a, b) => 
+            similarity(b.question, currentQuestion) - similarity(a.question, currentQuestion)
+        );
+    }
+
+    return questions
+        .slice(0, settings.ai.contextMemory.limit)
+        .map((qa, index) => `Q${index + 1}: ${qa.question}\nA${index + 1}: ${qa.answer}`);
 });
 
 ipcMain.handle('export-data', (event, filePath) => {
@@ -246,7 +389,7 @@ ipcMain.handle('import-data', (event, filePath) => {
     qaList = data.qaList || [];
     settings = { ...settings, ...data.settings };
     saveData();
-    setupGlobalShortcuts(); // Re-register shortcuts after import
+    setupGlobalShortcuts();
     return { qaList, settings };
 });
 
@@ -257,3 +400,9 @@ ipcMain.handle('show-save-dialog', (event, options) => {
 ipcMain.handle('show-open-dialog', (event, options) => {
     return dialog.showOpenDialog(options);
 });
+
+// Ollama IPC handlers
+ipcMain.handle('ollama-is-running', ollamaIsRunning);
+ipcMain.handle('ollama-list-models', ollamaListModels);
+ipcMain.handle('ollama-generate-answer', (event, model, prompt, imageData) => 
+    ollamaGenerateAnswer(model, prompt, imageData));

@@ -1,171 +1,76 @@
 .ai-settings {
-    padding: 20px 0;
+    padding: 1rem;
+}
+
+.ai-settings .section-group {
+    margin-bottom: 2rem;
+}
+
+.ai-settings .section-title {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: #333;
 }
 
 .ai-settings .setting-group {
-    margin-bottom: 24px;
+    margin-bottom: 1.5rem;
+}
+
+.ai-settings .setting-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
 }
 
 .ai-settings .setting-description {
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 14px;
-    margin-top: 4px;
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 0.25rem;
 }
 
-.ai-settings .error-message {
-    background-color: rgba(244, 67, 54, 0.1);
-    border: 1px solid rgba(244, 67, 54, 0.3);
-    padding: 16px;
-    border-radius: 4px;
-    margin-bottom: 16px;
-}
-
-.ai-settings .error-message h3 {
-    color: #f44336;
-    margin: 0 0 8px 0;
-}
-
-.ai-settings .error-message p {
-    margin: 0;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.ai-settings .error-message .error-details {
-    margin-top: 8px;
-    font-family: monospace;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-/* Toggle Switch */
-.toggle-switch {
-    position: relative;
-    width: 60px;
-    height: 34px;
-    margin: 8px 0;
-}
-
-.toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.toggle-switch label {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(60, 60, 60, 0.9);
-    transition: .4s;
-    border-radius: 34px;
-}
-
-.toggle-switch label:before {
-    position: absolute;
-    content: "";
-    height: 26px;
-    width: 26px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-}
-
-.toggle-switch input:checked + label {
-    background-color: #ffa500;
-}
-
-.toggle-switch input:checked + label:before {
-    transform: translateX(26px);
-}
-
-/* Temperature Slider */
+.ai-settings select,
 .ai-settings input[type="range"] {
-    -webkit-appearance: none;
     width: 100%;
-    max-width: 200px;
-    height: 4px;
-    background: rgba(60, 60, 60, 0.9);
-    border-radius: 2px;
-    margin: 10px 0;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-top: 0.25rem;
 }
 
-.ai-settings input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #ffa500;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.ai-settings input[type="range"]::-webkit-slider-thumb:hover {
-    background: #ffb52e;
+.ai-settings input[type="checkbox"] {
+    margin-right: 0.5rem;
 }
 
 .ai-settings #temperatureValue {
     display: inline-block;
-    margin-left: 10px;
-    min-width: 30px;
-    color: rgba(255, 255, 255, 0.8);
+    margin-left: 0.5rem;
+    min-width: 2em;
 }
 
-/* Model Select */
-.ai-settings select {
-    background-color: rgba(60, 60, 60, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #ffffff;
-    padding: 8px;
+.ai-settings .error-message {
+    background-color: #fff3f3;
+    border: 1px solid #ffcdd2;
     border-radius: 4px;
-    width: 100%;
-    max-width: 200px;
-    cursor: pointer;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    color: #d32f2f;
 }
 
-.ai-settings select:focus {
-    border-color: #ffa500;
-    outline: none;
+.ai-settings .error-message p {
+    margin: 0;
+    line-height: 1.5;
 }
 
-.ai-settings select option {
-    background-color: rgba(40, 40, 40, 0.95);
-    color: #ffffff;
+.ai-settings .error-message h3 {
+    margin: 0 0 0.5rem 0;
+    color: #c62828;
 }
 
-/* AI Answer Button */
-.ai-answer-btn {
-    background-color: transparent;
-    border: 1px solid rgba(255, 165, 0, 0.5);
-    color: #ffa500;
-    padding: 4px 8px;
-    font-size: 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.3s;
+.ai-settings .error-message p:last-child {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
 }
 
-.ai-answer-btn:hover {
-    background-color: rgba(255, 165, 0, 0.1);
-    border-color: #ffa500;
-}
-
-.ai-answer-btn.loading {
-    opacity: 0.7;
-    cursor: wait;
-}
-
-.ai-generated-badge {
-    font-size: 12px;
-    color: #ffa500;
-    background-color: rgba(255, 165, 0, 0.1);
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-left: 8px;
-    border: 1px solid rgba(255, 165, 0, 0.3);
+.ai-settings .error-message ⚠️ {
+    margin-right: 0.5rem;
 }

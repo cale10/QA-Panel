@@ -1,30 +1,25 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-    // Question management
-    addQuestion: (question, answer) => ipcRenderer.invoke('add-question', question, answer),
     getQuestions: () => ipcRenderer.invoke('get-questions'),
-    updateQuestion: (id, question, answer, isAIGenerated = false) => 
-        ipcRenderer.invoke('update-question', id, question, answer, isAIGenerated),
+    addQuestion: (question, answer) => ipcRenderer.invoke('add-question', question, answer),
+    updateQuestion: (id, question, answer, isAIGenerated) => ipcRenderer.invoke('update-question', id, question, answer, isAIGenerated),
     deleteQuestion: (id) => ipcRenderer.invoke('delete-question', id),
-    
-    // Settings management
     getSettings: () => ipcRenderer.invoke('get-settings'),
-    updateSettings: (newSettings) => ipcRenderer.invoke('update-settings', newSettings),
-    
-    // Last used app
+    updateSettings: (settings) => ipcRenderer.invoke('update-settings', settings),
     getLastUsedApp: () => ipcRenderer.invoke('get-last-used-app'),
+    getContextualQuestions: (question) => ipcRenderer.invoke('get-contextual-questions', question),
     onUpdateLastUsedApp: (callback) => ipcRenderer.on('update-last-used-app', callback),
-    
-    // Keyboard shortcuts
     onFocusNewQuestion: (callback) => ipcRenderer.on('focus-new-question', callback),
-    
-    // Import/Export
-    exportData: (filePath) => ipcRenderer.invoke('export-data', filePath),
-    importData: (filePath) => ipcRenderer.invoke('import-data', filePath),
+    onExportData: (callback) => ipcRenderer.on('export-data', callback),
+    onImportData: (callback) => ipcRenderer.on('import-data', callback),
     showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
     showOpenDialog: (options) => ipcRenderer.invoke('show-open-dialog', options),
-    
-    // Event cleanup
-    removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
+    exportData: (filePath) => ipcRenderer.invoke('export-data', filePath),
+    importData: (filePath) => ipcRenderer.invoke('import-data', filePath),
+
+    // Ollama API methods
+    ollamaIsRunning: () => ipcRenderer.invoke('ollama-is-running'),
+    ollamaListModels: () => ipcRenderer.invoke('ollama-list-models'),
+    ollamaGenerateAnswer: (model, prompt, imageData) => ipcRenderer.invoke('ollama-generate-answer', model, prompt, imageData)
 });

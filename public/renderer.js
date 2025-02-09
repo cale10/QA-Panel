@@ -6,12 +6,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitBtn = document.getElementById('submitBtn');
     const lastUsedAppDiv = document.getElementById('lastUsedApp');
     const settingsBtn = document.getElementById('settingsBtn');
+    const contextControlsDiv = document.getElementById('contextControls');
 
     let editingId = null;
     let currentQuestions = [];
     let isEditing = false;
     let settingsModal = null;
     let ollamaService = new OllamaService();
+    let contextControls = new ContextControls();
+
+    // Initialize context controls
+    contextControlsDiv.appendChild(contextControls.getElement());
 
     // Load existing questions and settings
     loadQuestions();
@@ -76,10 +81,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Auto-generate answer if enabled and no answer provided
                 if (settings.ai?.enabled && settings.ai?.autoAnswer && !answer) {
                     try {
-                        const prompt = ollamaService.createPrompt(settings.lastUsedApp, question);
+                        showLoading(submitBtn, 'Generating answer...');
+                        const contextQuestions = await window.electronAPI.getContextualQuestions(question);
+                        const prompt = ollamaService.createPrompt(
+                            settings.lastUsedApp,
+                            question,
+                            contextQuestions,
+                            settings.ai.contextMemory?.enabled
+                        );
+
+                        // Check if Ollama is running
+                        const isOllamaRunning = await ollamaService.isOllamaRunning();
+                        if (!isOllamaRunning) {
+                            throw new Error('Ollama is not running. Please start Ollama and try again.');
+                        }
+
                         finalAnswer = await ollamaService.generateAnswer(settings.ai.model, prompt);
                     } catch (error) {
                         console.error('Error generating AI answer:', error);
+                        alert(`Error generating answer: ${error.message}`);
+                        finalAnswer = '';
+                    } finally {
+                        hideLoading(submitBtn, 'Add Question');
                     }
                 }
 
@@ -117,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="delete-btn" data-id="${qa.id}">Delete</button>
                     </div>
                     ${qa.isAIGenerated ? '<span class="ai-generated-badge">🤖 AI Generated</span>' : ''}
+                    ${qa.referencesContext ? '<span class="reference-badge">📚 References Context</span>' : ''}
                 `;
                 li.setAttribute('tabindex', '0');
                 li.dataset.id = qa.id;
@@ -144,27 +168,51 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!button) return;
 
         try {
-            button.disabled = true;
-            button.classList.add('loading');
-            button.textContent = '🤖 Generating...';
-
+            showLoading(button, 'Generating...');
             const settings = await window.electronAPI.getSettings();
             if (!settings.ai?.enabled) {
                 throw new Error('AI features are not enabled');
             }
 
-            const prompt = ollamaService.createPrompt(settings.lastUsedApp, qa.question);
+            // Check if Ollama is running
+            const isOllamaRunning = await ollamaService.isOllamaRunning();
+            if (!isOllamaRunning) {
+                throw new Error('Ollama is not running. Please start Ollama and try again.');
+            }
+
+            const contextQuestions = await window.electronAPI.getContextualQuestions(qa.question);
+            const prompt = ollamaService.createPrompt(
+                settings.lastUsedApp,
+                qa.question,
+                contextQuestions,
+                settings.ai.contextMemory?.enabled
+            );
             const answer = await ollamaService.generateAnswer(settings.ai.model, prompt);
 
             await window.electronAPI.updateQuestion(parseInt(id), qa.question, answer, true);
             await loadQuestions();
         } catch (error) {
             console.error('Error generating answer:', error);
+            alert(`Error generating answer: ${error.message}`);
             button.textContent = '🤖 Error - Try Again';
         } finally {
-            button.disabled = false;
-            button.classList.remove('loading');
+            hideLoading(button, '🤖 Generate Answer');
         }
+    }
+
+    function showLoading(element, text) {
+        element.disabled = true;
+        element.innerHTML = `
+            <div class="loading-indicator">
+                <div class="spinner"></div>
+                ${text}
+            </div>
+        `;
+    }
+
+    function hideLoading(element, text) {
+        element.disabled = false;
+        element.textContent = text;
     }
 
     async function loadSettings() {
