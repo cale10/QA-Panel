@@ -1,161 +1,211 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QA-Panel</title>
+    <title>QA Panel</title>
     <link rel="stylesheet" href="styles/settings.css">
-    <link rel="stylesheet" href="styles/shortcuts.css">
     <link rel="stylesheet" href="styles/ai-settings.css">
+    <link rel="stylesheet" href="styles/shortcuts.css">
+    <link rel="stylesheet" href="styles/context-controls.css">
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: rgba(28, 28, 28, 0.9);
+            margin: 20px;
+            background-color: rgba(32, 33, 36, 0.9);
             color: #ffffff;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: rgba(40, 40, 40, 0.9);
-            padding: 20px;
-            border-radius: 8px;
-        }
-        h1, h2 {
+
+        .app-header {
             text-align: center;
-            color: #ffa500;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
             margin-bottom: 20px;
         }
-        input, textarea {
-            padding: 10px;
-            font-size: 16px;
-            background-color: rgba(60, 60, 60, 0.9);
-            color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
+
+        .app-title {
+            font-size: 24px;
+            color: #ffa500;
+            margin: 0;
+        }
+
+        .last-used-app {
+            font-size: 14px;
+            color: #ffa500;
+            margin: 5px 0;
+        }
+
+        #questionForm {
+            margin-bottom: 20px;
+        }
+
+        #questionInput {
             width: 100%;
-            box-sizing: border-box;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #2d2e31;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 4px;
         }
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: #ffa500;
+
+        #answerInput {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #2d2e31;
+            border: 1px solid #444;
+            color: #fff;
+            resize: vertical;
+            border-radius: 4px;
         }
-        button {
+
+        #submitBtn {
+            width: 100%;
             padding: 10px;
             background-color: #ffa500;
-            color: #000000;
+            color: #000;
             border: none;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #ffb52e;
-        }
-        #questionList {
-            list-style-type: none;
-            padding: 0;
-        }
-        #questionList li {
-            background-color: rgba(60, 60, 60, 0.9);
-            margin-bottom: 10px;
-            padding: 15px;
-            border-radius: 4px;
-            position: relative;
-        }
-        #questionList li:focus {
-            outline: 2px solid #ffa500;
-            background-color: rgba(80, 80, 80, 0.9);
-        }
-        .question-number {
-            position: absolute;
-            left: -30px;
-            top: 50%;
-            transform: translateY(-50%);
-            background-color: #ffa500;
-            color: #000000;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             font-weight: bold;
         }
-        .question-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 10px;
+
+        #submitBtn:hover {
+            background-color: #ffb52e;
         }
-        .edit-btn, .delete-btn {
-            padding: 5px 10px;
-            font-size: 14px;
+
+        #questionList {
+            list-style: none;
+            padding: 0;
         }
-        .edit-btn {
-            background-color: #4CAF50;
+
+        #questionList li {
+            background-color: #2d2e31;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #444;
         }
-        .delete-btn {
-            background-color: #f44336;
-        }
-        #lastUsedApp {
+
+        .question-number {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background-color: #ffa500;
+            color: #000;
             text-align: center;
-            margin-bottom: 20px;
-            font-style: italic;
-            color: #ffa500;
+            line-height: 24px;
+            border-radius: 12px;
+            margin-right: 10px;
         }
-        .settings-button {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background-color: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #ffffff;
-            padding: 8px;
+
+        .question-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .edit-btn, .delete-btn, .ai-answer-btn {
+            padding: 5px 10px;
+            border: none;
             border-radius: 4px;
             cursor: pointer;
+            font-size: 12px;
         }
-        .settings-button:hover {
-            border-color: #ffa500;
+
+        .edit-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .ai-answer-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        #settingsBtn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
             color: #ffa500;
         }
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
+
+        .ai-generated-badge, .reference-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .ai-generated-badge {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .reference-badge {
+            background-color: #9C27B0;
+            color: white;
+        }
+
+        .loading-indicator {
             display: flex;
             align-items: center;
-            justify-content: center;
-            z-index: 1000;
+            gap: 8px;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <button class="settings-button" id="settingsBtn">⚙️ Settings</button>
-        <h1>QA-Panel</h1>
-        <div id="lastUsedApp">Last Used App: Loading...</div>
-        <form id="questionForm">
-            <input type="text" id="questionInput" placeholder="Enter your question" required>
-            <textarea id="answerInput" placeholder="Enter the answer (optional)" rows="3"></textarea>
-            <button type="submit" id="submitBtn">Add Question</button>
-        </form>
-        <h2>Questions and Answers:</h2>
-        <ul id="questionList"></ul>
+    <div class="app-header">
+        <h1 class="app-title">QA-Panel</h1>
+        <div id="lastUsedApp" class="last-used-app">Last Used App: Windows Explorer</div>
     </div>
+
+    <div id="contextControls"></div>
+
+    <form id="questionForm">
+        <input type="text" id="questionInput" placeholder="Enter your question...">
+        <textarea id="answerInput" placeholder="Enter or generate an answer..."></textarea>
+        <button type="submit" id="submitBtn">Add Question</button>
+    </form>
+
+    <h2 style="color: #ffa500; margin-top: 30px;">Questions and Answers:</h2>
+    <ul id="questionList"></ul>
+    <button id="settingsBtn">⚙️</button>
+
+    <!-- Load services first -->
     <script src="services/OllamaService.js"></script>
+
+    <!-- Load base components -->
+    <script src="components/settings/ShortcutInput.js"></script>
+    <script src="components/settings/ShortcutsList.js"></script>
+    <script src="components/settings/ShortcutsModal.js"></script>
     <script src="components/settings/AISettings.js"></script>
+    <script src="components/ContextControls.js"></script>
     <script src="components/SettingsModal.js"></script>
+
+    <!-- Load main renderer last -->
     <script src="renderer.js"></script>
 </body>
 </html>
