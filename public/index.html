@@ -5,7 +5,7 @@
     <link rel="stylesheet" href="styles/settings.css">
     <link rel="stylesheet" href="styles/ai-settings.css">
     <link rel="stylesheet" href="styles/shortcuts.css">
-    <link rel="stylesheet" href="styles/context-controls.css">
+    <link rel="stylesheet" href="styles/memory-controls.css">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -17,6 +17,9 @@
         .app-header {
             text-align: center;
             margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .app-title {
@@ -29,6 +32,37 @@
             font-size: 14px;
             color: #ffa500;
             margin: 5px 0;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #captureBtn {
+            background: none;
+            border: 1px solid #ffa500;
+            color: #ffa500;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #captureBtn:hover {
+            background-color: rgba(255, 165, 0, 0.1);
+        }
+
+        #captureBtn:active {
+            background-color: rgba(255, 165, 0, 0.2);
+        }
+
+        #captureBtn .icon {
+            font-size: 16px;
         }
 
         #questionForm {
@@ -174,15 +208,60 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        .capture-preview {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            background-color: #2d2e31;
+            border: 1px solid #444;
+            border-radius: 4px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .capture-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .capture-preview .close-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
     <div class="app-header">
-        <h1 class="app-title">QA-Panel</h1>
-        <div id="lastUsedApp" class="last-used-app">Last Used App: Windows Explorer</div>
+        <div>
+            <h1 class="app-title">QA-Panel</h1>
+            <div id="lastUsedApp" class="last-used-app">Last Used App: Windows Explorer</div>
+        </div>
+        <div class="header-controls">
+            <button id="captureBtn" title="Capture screen for vision analysis">
+                <span class="icon">📷</span>
+                Capture Screen
+            </button>
+            <button id="settingsBtn">⚙️</button>
+        </div>
     </div>
 
-    <div id="contextControls"></div>
+    <div id="memoryControls"></div>
 
     <form id="questionForm">
         <input type="text" id="questionInput" placeholder="Enter your question...">
@@ -192,7 +271,11 @@
 
     <h2 style="color: #ffa500; margin-top: 30px;">Questions and Answers:</h2>
     <ul id="questionList"></ul>
-    <button id="settingsBtn">⚙️</button>
+
+    <div class="capture-preview">
+        <button class="close-btn">×</button>
+        <img id="capturePreview" alt="Screen capture preview">
+    </div>
 
     <!-- Load services first -->
     <script src="services/OllamaService.js"></script>
@@ -202,7 +285,7 @@
     <script src="components/settings/ShortcutsList.js"></script>
     <script src="components/settings/ShortcutsModal.js"></script>
     <script src="components/settings/AISettings.js"></script>
-    <script src="components/ContextControls.js"></script>
+    <script src="components/MemoryControls.js"></script>
     <script src="components/SettingsModal.js"></script>
 
     <!-- Load main renderer last -->

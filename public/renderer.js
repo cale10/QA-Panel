@@ -6,17 +6,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     const submitBtn = document.getElementById('submitBtn');
     const lastUsedAppDiv = document.getElementById('lastUsedApp');
     const settingsBtn = document.getElementById('settingsBtn');
-    const contextControlsDiv = document.getElementById('contextControls');
+    const memoryControlsDiv = document.getElementById('memoryControls');
+    const captureBtn = document.getElementById('captureBtn');
+    const capturePreview = document.querySelector('.capture-preview');
+    const capturePreviewImg = document.getElementById('capturePreview');
+    const captureCloseBtn = document.querySelector('.capture-preview .close-btn');
 
     let editingId = null;
     let currentQuestions = [];
     let isEditing = false;
     let settingsModal = null;
     let ollamaService = new OllamaService();
-    let contextControls = new ContextControls();
+    let memoryControls = new MemoryControls();
+    let streamingAnswer = '';
+    let streamingInterval = null;
+    let lastCapturedImage = null;
 
-    // Initialize context controls
-    contextControlsDiv.appendChild(await contextControls.getElement());
+    // Initialize memory controls
+    memoryControlsDiv.appendChild(await memoryControls.getElement());
 
     // Load existing questions and settings
     await Promise.all([
@@ -25,11 +32,74 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateLastUsedApp()
     ]);
 
+    // Screen capture handling
+    captureBtn.addEventListener('click', async () => {
+        try {
+            // Disable the button and show loading state
+            captureBtn.disabled = true;
+            captureBtn.innerHTML = `<div class="loading-indicator"><div class="spinner"></div>Capturing...</div>`;
+
+            // Hide the window
+            await window.electronAPI.hideWindow();
+
+            // Wait a moment for the window to hide
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Capture the screen
+            const imageData = await window.electronAPI.captureScreen();
+            if (imageData) {
+                lastCapturedImage = imageData;
+                capturePreviewImg.src = `data:image/png;base64,${imageData}`;
+                capturePreview.style.display = 'block';
+            }
+
+            // Show the window again
+            await window.electronAPI.showWindow();
+        } catch (error) {
+            console.error('Error capturing screen:', error);
+            alert('Failed to capture screen: ' + error.message);
+        } finally {
+            // Reset button state
+            captureBtn.disabled = false;
+            captureBtn.innerHTML = `<span class="icon">📷</span>Capture Screen`;
+        }
+    });
+
+    captureCloseBtn.addEventListener('click', () => {
+        capturePreview.style.display = 'none';
+        lastCapturedImage = null;
+    });
+
     // Listen for last used app updates
     window.electronAPI.onUpdateLastUsedApp((event, lastUsedApp) => {
         updateLastUsedApp();
         loadQuestions();
     });
+
+    // Listen for streaming responses
+    window.electronAPI.onStreamResponse((event, chunk) => {
+        streamingAnswer += chunk;
+        if (answerInput.value === '') {
+            startTypingAnimation();
+        }
+    });
+
+    function startTypingAnimation() {
+        let displayedChars = 0;
+        if (streamingInterval) clearInterval(streamingInterval);
+
+        streamingInterval = setInterval(() => {
+            if (displayedChars < streamingAnswer.length) {
+                displayedChars++;
+                answerInput.value = streamingAnswer.substring(0, displayedChars);
+                answerInput.scrollTop = answerInput.scrollHeight;
+            } else {
+                clearInterval(streamingInterval);
+                streamingInterval = null;
+                streamingAnswer = '';
+            }
+        }, 10); // Adjust speed as needed
+    }
 
     settingsBtn.addEventListener('click', () => {
         if (!settingsModal) {
@@ -85,12 +155,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                     try {
                         showLoading(submitBtn, 'Generating answer...');
                         const contextQuestions = await window.electronAPI.getContextualQuestions(question);
-                        const prompt = ollamaService.createPrompt(
-                            settings.lastUsedApp,
-                            question,
-                            contextQuestions,
-                            settings.ai.contextMemory?.enabled
-                        );
+
+                        // Get the appropriate template
+                        let prompt;
+                        switch (settings.ai.promptTemplate.mode) {
+                            case 'simple':
+                                prompt = settings.ai.promptTemplate.templates.simple;
+                                break;
+                            case 'advanced':
+                                prompt = `${settings.ai.promptTemplate.systemPrompt}\n\n`;
+                                if (settings.ai.promptTemplate.customInstructions.length > 0) {
+                                    prompt += `Instructions:\n${settings.ai.promptTemplate.customInstructions.join('\n')}\n\n`;
+                                }
+                                prompt += `Question: ${question}`;
+                                break;
+                            default: // 'basic'
+                                prompt = ollamaService.createPrompt(
+                                    settings.lastUsedApp,
+                                    question,
+                                    contextQuestions,
+                                    true // Always use context in basic mode
+                                );
+                        }
 
                         // Check if Ollama is running
                         const isOllamaRunning = await ollamaService.isOllamaRunning();
@@ -98,7 +184,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                             throw new Error('Ollama is not running. Please start Ollama and try again.');
                         }
 
-                        finalAnswer = await ollamaService.generateAnswer(settings.ai.model, prompt);
+                        // Use vision model if there's a captured image
+                        const model = lastCapturedImage ? settings.ai.visionModel : settings.ai.model;
+                        finalAnswer = await ollamaService.generateAnswer(model, prompt, lastCapturedImage);
+
+                        // Clear the captured image after using it
+                        if (lastCapturedImage) {
+                            lastCapturedImage = null;
+                            capturePreview.style.display = 'none';
+                        }
                     } catch (error) {
                         console.error('Error generating AI answer:', error);
                         alert(`Error generating answer: ${error.message}`);
@@ -183,13 +277,38 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const contextQuestions = await window.electronAPI.getContextualQuestions(qa.question);
-            const prompt = ollamaService.createPrompt(
-                settings.lastUsedApp,
-                qa.question,
-                contextQuestions,
-                settings.ai.contextMemory?.enabled
-            );
-            const answer = await ollamaService.generateAnswer(settings.ai.model, prompt);
+
+            // Get the appropriate template
+            let prompt;
+            switch (settings.ai.promptTemplate.mode) {
+                case 'simple':
+                    prompt = settings.ai.promptTemplate.templates.simple;
+                    break;
+                case 'advanced':
+                    prompt = `${settings.ai.promptTemplate.systemPrompt}\n\n`;
+                    if (settings.ai.promptTemplate.customInstructions.length > 0) {
+                        prompt += `Instructions:\n${settings.ai.promptTemplate.customInstructions.join('\n')}\n\n`;
+                    }
+                    prompt += `Question: ${qa.question}`;
+                    break;
+                default: // 'basic'
+                    prompt = ollamaService.createPrompt(
+                        settings.lastUsedApp,
+                        qa.question,
+                        contextQuestions,
+                        true // Always use context in basic mode
+                    );
+            }
+
+            // Use vision model if there's a captured image
+            const model = lastCapturedImage ? settings.ai.visionModel : settings.ai.model;
+            const answer = await ollamaService.generateAnswer(model, prompt, lastCapturedImage);
+
+            // Clear the captured image after using it
+            if (lastCapturedImage) {
+                lastCapturedImage = null;
+                capturePreview.style.display = 'none';
+            }
 
             await window.electronAPI.updateQuestion(parseInt(id), qa.question, answer, true);
             await loadQuestions();

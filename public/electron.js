@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, dialog, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, dialog, screen, desktopCapturer } = require('electron');
 const path = require('path');
 const url = require('url');
 const isDev = require('electron-is-dev');
@@ -10,7 +10,7 @@ const fetch = require('node-fetch');
 log.transports.file.level = 'info';
 log.transports.console.level = 'info';
 
-const OLLAMA_API = 'http://127.0.0.1:11434/api'; // Changed from localhost to 127.0.0.1
+const OLLAMA_API = 'http://127.0.0.1:11434/api';
 
 let mainWindow;
 let tray;
@@ -32,12 +32,17 @@ let settings = {
     },
     ai: {
         enabled: false,
-        model: 'llama3.2',
+        model: 'llama2',
         visionModel: 'llava:latest',
         autoAnswer: false,
         temperature: 0.7,
         useVision: false,
-        promptTemplate: `System: You are an expert in {app_name} and software applications.
+        streamResponse: true,
+        promptTemplate: {
+            mode: 'basic', // 'simple', 'basic', or 'advanced'
+            templates: {
+                simple: 'Question: {question}\n\nAnswer:',
+                basic: `System: You are an expert in {app_name} and software applications.
 
 {if context_enabled}Previous Interactions (Sorted by {sort_method}):
 {previous_qa}{/if}
@@ -52,6 +57,11 @@ Instructions:
 - Reference previous answers if they apply
 - {/if}Provide a clear and concise answer
 - Focus on practical solutions`,
+                advanced: '' // User customizes through systemPrompt and customInstructions
+            },
+            customInstructions: [],
+            systemPrompt: 'You are an expert in {app_name} and software applications.'
+        },
         contextMemory: {
             enabled: true,
             limit: 5,
@@ -62,6 +72,32 @@ Instructions:
 
 const dataFilePath = path.join(app.getPath('userData'), 'qa-data.json');
 const settingsFilePath = path.join(app.getPath('userData'), 'settings.json');
+
+// Screen capture handler
+async function captureLastUsedAppScreen() {
+    try {
+        const sources = await desktopCapturer.getSources({
+            types: ['screen'],
+            thumbnailSize: {
+                width: screen.getPrimaryDisplay().workAreaSize.width,
+                height: screen.getPrimaryDisplay().workAreaSize.height
+            }
+        });
+
+        const primaryDisplay = sources[0]; // Get the primary display
+        if (!primaryDisplay) {
+            log.warn('No display found for screen capture');
+            return null;
+        }
+
+        // Convert the thumbnail to base64
+        const thumbnail = primaryDisplay.thumbnail.toDataURL();
+        return thumbnail.split(',')[1]; // Remove data URL prefix
+    } catch (error) {
+        log.error('Error capturing screen:', error);
+        return null;
+    }
+}
 
 // Ollama API handlers
 async function ollamaIsRunning() {
@@ -103,7 +139,7 @@ async function ollamaGenerateAnswer(model, prompt, imageData = null) {
         const body = {
             model: model,
             prompt: prompt,
-            stream: false,
+            stream: settings.ai.streamResponse,
             options: {
                 temperature: settings.ai.temperature
             }
@@ -113,21 +149,59 @@ async function ollamaGenerateAnswer(model, prompt, imageData = null) {
             body.images = [imageData];
         }
 
-        const response = await fetch(`${OLLAMA_API}/generate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body),
-        });
+        if (settings.ai.streamResponse) {
+            const response = await fetch(`${OLLAMA_API}/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const reader = response.body.getReader();
+            let fullResponse = '';
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = new TextDecoder().decode(value);
+                    const lines = chunk.split('\n').filter(Boolean);
+
+                    for (const line of lines) {
+                        const data = JSON.parse(line);
+                        fullResponse += data.response;
+                        mainWindow.webContents.send('stream-response', data.response);
+                    }
+                }
+            } finally {
+                reader.releaseLock();
+            }
+
+            return fullResponse;
+        } else {
+            const response = await fetch(`${OLLAMA_API}/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            return data.response;
         }
-
-        const data = await response.json();
-        return data.response;
     } catch (error) {
         log.error('Error generating answer:', error);
         throw error;
@@ -138,7 +212,6 @@ function loadData() {
     try {
         if (fs.existsSync(dataFilePath)) {
             qaList = JSON.parse(fs.readFileSync(dataFilePath, 'utf-8'));
-            // Add isAIGenerated flag if it doesn't exist
             qaList = qaList.map(qa => ({
                 ...qa,
                 isAIGenerated: qa.isAIGenerated || false,
@@ -147,7 +220,6 @@ function loadData() {
         }
         if (fs.existsSync(settingsFilePath)) {
             const loadedSettings = JSON.parse(fs.readFileSync(settingsFilePath, 'utf-8'));
-            // Deep merge settings to preserve new fields
             settings = {
                 ...settings,
                 ...loadedSettings,
@@ -157,6 +229,10 @@ function loadData() {
                     contextMemory: {
                         ...settings.ai.contextMemory,
                         ...(loadedSettings.ai?.contextMemory || {})
+                    },
+                    promptTemplate: {
+                        ...settings.ai.promptTemplate,
+                        ...(loadedSettings.ai?.promptTemplate || {})
                     }
                 }
             };
@@ -361,7 +437,6 @@ ipcMain.handle('get-contextual-questions', (event, currentQuestion) => {
 
     let questions = [...appQuestions];
     if (settings.ai.contextMemory.sortByRelevance) {
-        // Simple relevance sorting based on text similarity
         const similarity = (a, b) => {
             const aWords = new Set(a.toLowerCase().split(/\W+/));
             const bWords = new Set(b.toLowerCase().split(/\W+/));
@@ -399,6 +474,22 @@ ipcMain.handle('show-save-dialog', (event, options) => {
 
 ipcMain.handle('show-open-dialog', (event, options) => {
     return dialog.showOpenDialog(options);
+});
+
+// Screen capture handler
+ipcMain.handle('capture-screen', async () => {
+    return await captureLastUsedAppScreen();
+});
+
+// Window control handlers
+ipcMain.handle('hide-window', () => {
+    mainWindow.hide();
+    return true;
+});
+
+ipcMain.handle('show-window', () => {
+    mainWindow.show();
+    return true;
 });
 
 // Ollama IPC handlers
