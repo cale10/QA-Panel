@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #ffffff;
+        }
+        #output {
+            white-space: pre-wrap;
+            padding: 10px;
+            background: #2d2d2d;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+        .success {
+            color: #69db7c;
+        }
+        button {
+            background: #4a4a4a;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a5a5a;
+        }
+        .loading {
+            opacity: 0.5;
+            cursor: wait;
+        }
+    </style>
+</head>
+<body>
+    <h2>AI Test Panel</h2>
+    <div>
+        <button id="checkStatus">Check Ollama Status</button>
+        <button id="listModels">List Models</button>
+        <button id="testGenerate">Test Generation</button>
+    </div>
+    <div id="output"></div>
+
+    <script src="services/OllamaService.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        const service = new OllamaService();
+        
+        function log(message, type = 'normal') {
+            const line = document.createElement('div');
+            line.textContent = message;
+            line.className = type;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function setLoading(button, isLoading) {
+            button.disabled = isLoading;
+            button.classList.toggle('loading', isLoading);
+        }
+
+        document.getElementById('checkStatus').addEventListener('click', async (e) => {
+            setLoading(e.target, true);
+            try {
+                const isRunning = await service.isOllamaRunning();
+                log(`Ollama running: ${isRunning}`, isRunning ? 'success' : 'error');
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+            }
+            setLoading(e.target, false);
+        });
+
+        document.getElementById('listModels').addEventListener('click', async (e) => {
+            setLoading(e.target, true);
+            try {
+                const models = await service.listModels();
+                log('Available models:', 'success');
+                models.forEach(model => {
+                    log(`- ${model.name}`);
+                });
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+            }
+            setLoading(e.target, false);
+        });
+
+        document.getElementById('testGenerate').addEventListener('click', async (e) => {
+            setLoading(e.target, true);
+            try {
+                const question = "What is JavaScript?";
+                log(`\nTest Question: ${question}`);
+                
+                const answer = await service.generateAnswer(
+                    'llama3.2:latest',
+                    service.createPrompt('VSCode', question)
+                );
+                
+                log(`\nGenerated Answer: ${answer}`, 'success');
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+            }
+            setLoading(e.target, false);
+        });
+    </script>
+</body>
+</html>

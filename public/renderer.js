@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const questionForm = document.getElementById('questionForm');
     const questionInput = document.getElementById('questionInput');
     const answerInput = document.getElementById('answerInput');
@@ -16,12 +16,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let contextControls = new ContextControls();
 
     // Initialize context controls
-    contextControlsDiv.appendChild(contextControls.getElement());
+    contextControlsDiv.appendChild(await contextControls.getElement());
 
     // Load existing questions and settings
-    loadQuestions();
-    loadSettings();
-    updateLastUsedApp();
+    await Promise.all([
+        loadQuestions(),
+        loadSettings(),
+        updateLastUsedApp()
+    ]);
 
     // Listen for last used app updates
     window.electronAPI.onUpdateLastUsedApp((event, lastUsedApp) => {
@@ -126,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentQuestions = await window.electronAPI.getQuestions();
         questionList.innerHTML = '';
         if (currentQuestions.length === 0) {
-            questionList.innerHTML = '<p>No questions for this app yet.</p>';
+            questionList.innerHTML = '<p style="color: #666; text-align: center;">No questions for this app yet.</p>';
         } else {
             currentQuestions.forEach((qa, index) => {
                 const li = document.createElement('li');
@@ -245,8 +247,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function deleteQuestion(id) {
-        await window.electronAPI.deleteQuestion(parseInt(id));
-        loadQuestions();
+        if (confirm('Are you sure you want to delete this question?')) {
+            await window.electronAPI.deleteQuestion(parseInt(id));
+            loadQuestions();
+        }
     }
 
     document.addEventListener('keydown', (e) => {
