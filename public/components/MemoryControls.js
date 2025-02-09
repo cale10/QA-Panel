@@ -20,24 +20,7 @@ class MemoryControls {
                 </div>
 
                 <div class="control-group">
-                    <label>History Size</label>
-                    <select id="memoryLimit">
-                        ${Array.from({length: 9}, (_, i) => i + 1).map(num => `
-                            <option value="${num}" ${num === 5 ? 'selected' : ''}>
-                                ${num} ${num === 1 ? 'entry' : 'entries'}
-                            </option>
-                        `).join('')}
-                    </select>
-                    <p class="control-description">Number of previous interactions to remember</p>
-                </div>
-
-                <div class="control-group">
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="sortByRelevance">
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-label">Smart Sorting</span>
-                    </label>
-                    <p class="control-description">Prioritize most relevant previous interactions</p>
+                    <p class="info-text">Memory feature will remember up to 5 previous questions</p>
                 </div>
             </div>
         `;
@@ -47,12 +30,7 @@ class MemoryControls {
 
     setupEventListeners() {
         const memoryEnabled = this.element.querySelector('#memoryEnabled');
-        const memoryLimit = this.element.querySelector('#memoryLimit');
-        const sortByRelevance = this.element.querySelector('#sortByRelevance');
-
-        [memoryEnabled, memoryLimit, sortByRelevance].forEach(input => {
-            input.addEventListener('change', () => this.saveSettings());
-        });
+        memoryEnabled.addEventListener('change', () => this.saveSettings());
     }
 
     async saveSettings() {
@@ -65,8 +43,8 @@ class MemoryControls {
                     ...settings.ai,
                     contextMemory: {
                         enabled: this.element.querySelector('#memoryEnabled').checked,
-                        limit: parseInt(this.element.querySelector('#memoryLimit').value),
-                        sortByRelevance: this.element.querySelector('#sortByRelevance').checked
+                        limit: 5,
+                        sortByRelevance: false
                     }
                 }
             };
@@ -83,12 +61,7 @@ class MemoryControls {
             
             if (settings.ai?.contextMemory) {
                 const memoryEnabled = this.element.querySelector('#memoryEnabled');
-                const memoryLimit = this.element.querySelector('#memoryLimit');
-                const sortByRelevance = this.element.querySelector('#sortByRelevance');
-
                 if (memoryEnabled) memoryEnabled.checked = settings.ai.contextMemory.enabled;
-                if (memoryLimit) memoryLimit.value = settings.ai.contextMemory.limit.toString();
-                if (sortByRelevance) sortByRelevance.checked = settings.ai.contextMemory.sortByRelevance;
             }
         } catch (error) {
             console.error('Error loading memory settings:', error);

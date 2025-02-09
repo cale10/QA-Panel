@@ -436,21 +436,8 @@ ipcMain.handle('get-contextual-questions', (event, currentQuestion) => {
     }
 
     let questions = [...appQuestions];
-    if (settings.ai.contextMemory.sortByRelevance) {
-        const similarity = (a, b) => {
-            const aWords = new Set(a.toLowerCase().split(/\W+/));
-            const bWords = new Set(b.toLowerCase().split(/\W+/));
-            const intersection = new Set([...aWords].filter(x => bWords.has(x)));
-            return intersection.size / Math.sqrt(aWords.size * bWords.size);
-        };
-
-        questions.sort((a, b) => 
-            similarity(b.question, currentQuestion) - similarity(a.question, currentQuestion)
-        );
-    }
-
     return questions
-        .slice(0, settings.ai.contextMemory.limit)
+        .slice(0, 5)
         .map((qa, index) => `Q${index + 1}: ${qa.question}\nA${index + 1}: ${qa.answer}`);
 });
 
