@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <button class="delete-btn" data-id="${qa.id}">Delete</button>
                     </div>
                     ${qa.isAIGenerated ? '<span class="ai-generated-badge">🤖 AI Generated</span>' : ''}
-                    ${qa.referencesContext ? '<span class="reference-badge">📚 References Context</span>' : ''}
+                    ${qa.referencesContext ? '<span class="reference-badge">📚 Uses Memory</span>' : ''}
                 `;
                 li.setAttribute('tabindex', '0');
                 li.dataset.id = qa.id;
