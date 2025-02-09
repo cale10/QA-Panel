@@ -158,30 +158,6 @@ class AISettings {
                         <p class="setting-description">Add specific instructions for the AI (one per line)</p>
                     </div>
                 </div>
-
-                <div class="section-group">
-                    <h3 class="section-title">Context Memory</h3>
-                    <div class="setting-group">
-                        <label>History Limit</label>
-                        <select id="contextLimit" class="select-control">
-                            ${Array.from({length: 9}, (_, i) => i + 1).map(num => `
-                                <option value="${num}" ${num === settings.ai?.contextMemory?.limit ? 'selected' : ''}>
-                                    ${num}
-                                </option>
-                            `).join('')}
-                        </select>
-                        <p class="setting-description">Number of previous Q&As to remember</p>
-                    </div>
-
-                    <div class="setting-group">
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="sortByRelevance" ${settings.ai?.contextMemory?.sortByRelevance ? 'checked' : ''}>
-                            <span class="toggle-slider"></span>
-                            <span class="toggle-label">Sort by Relevance</span>
-                        </label>
-                        <p class="setting-description">Sort previous Q&As by relevance instead of time</p>
-                    </div>
-                </div>
             `;
 
             // Add event listeners
@@ -238,8 +214,6 @@ class AISettings {
         const templateMode = this.element.querySelector('#templateMode');
         const systemPrompt = this.element.querySelector('#systemPrompt');
         const customInstructions = this.element.querySelector('#customInstructions');
-        const contextLimit = this.element.querySelector('#contextLimit');
-        const sortByRelevance = this.element.querySelector('#sortByRelevance');
 
         if (!aiEnabled) return {};
 
@@ -276,8 +250,8 @@ Instructions:
             },
             contextMemory: {
                 enabled: true, // Always enabled except in simple mode
-                limit: parseInt(contextLimit.value),
-                sortByRelevance: sortByRelevance.checked
+                limit: 5,
+                sortByRelevance: false
             }
         };
     }
@@ -296,8 +270,6 @@ Instructions:
         const templateMode = this.element.querySelector('#templateMode');
         const systemPrompt = this.element.querySelector('#systemPrompt');
         const customInstructions = this.element.querySelector('#customInstructions');
-        const contextLimit = this.element.querySelector('#contextLimit');
-        const sortByRelevance = this.element.querySelector('#sortByRelevance');
 
         if (aiEnabled) aiEnabled.checked = settings.enabled;
         if (aiModel) aiModel.value = settings.model;
@@ -328,8 +300,6 @@ Instructions:
         }
         if (systemPrompt) systemPrompt.value = settings.promptTemplate?.systemPrompt || '';
         if (customInstructions) customInstructions.value = (settings.promptTemplate?.customInstructions || []).join('\n');
-        if (contextLimit) contextLimit.value = settings.contextMemory?.limit;
-        if (sortByRelevance) sortByRelevance.checked = settings.contextMemory?.sortByRelevance;
     }
 
     async getElement() {

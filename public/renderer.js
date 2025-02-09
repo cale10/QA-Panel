@@ -142,6 +142,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const answer = answerInput.value.trim();
 
         if (question) {
+            // Check if we're at the 5 question limit
+            if (!editingId && currentQuestions.length >= 5) {
+                alert('Maximum limit of 5 questions reached. Please delete some questions to add more.');
+                return;
+            }
             if (editingId) {
                 await window.electronAPI.updateQuestion(editingId, question, answer);
                 editingId = null;
@@ -366,10 +371,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function deleteQuestion(id) {
-        if (confirm('Are you sure you want to delete this question?')) {
-            await window.electronAPI.deleteQuestion(parseInt(id));
-            loadQuestions();
-        }
+        await window.electronAPI.deleteQuestion(parseInt(id));
+        loadQuestions();
     }
 
     document.addEventListener('keydown', (e) => {
