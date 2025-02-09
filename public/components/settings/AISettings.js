@@ -51,14 +51,14 @@ class AISettings {
                         <label class="toggle-switch">
                             <input type="checkbox" id="aiEnabled" ${settings.ai?.enabled ? 'checked' : ''}>
                             <span class="toggle-slider"></span>
-                            <span class="toggle-label">Enable AI Features</span>
+                            <span class="toggle-label">AI Features</span>
                         </label>
-                        <p class="setting-description">Use AI to automatically generate answers</p>
+                        <p class="control-description">Use AI to automatically generate answers</p>
                     </div>
 
                     <div class="setting-group">
                         <label>Primary Model</label>
-                        <select id="aiModel">
+                        <select id="aiModel" class="select-control">
                             ${regularModels.map(model => `
                                 <option value="${model.name}" ${model.name === settings.ai?.model ? 'selected' : ''}>
                                     ${model.name}
@@ -70,7 +70,7 @@ class AISettings {
 
                     <div class="setting-group">
                         <label>Vision Model</label>
-                        <select id="visionModel">
+                        <select id="visionModel" class="select-control">
                             ${visionModels.map(model => `
                                 <option value="${model.name}" ${model.name === settings.ai?.visionModel ? 'selected' : ''}>
                                     ${model.name}
@@ -84,18 +84,18 @@ class AISettings {
                         <label class="toggle-switch">
                             <input type="checkbox" id="autoAnswer" ${settings.ai?.autoAnswer ? 'checked' : ''}>
                             <span class="toggle-slider"></span>
-                            <span class="toggle-label">Auto-generate Answers</span>
+                            <span class="toggle-label">Auto-generate</span>
                         </label>
-                        <p class="setting-description">Automatically generate answers when adding questions</p>
+                        <p class="control-description">Automatically generate answers when adding questions</p>
                     </div>
 
                     <div class="setting-group">
                         <label class="toggle-switch">
                             <input type="checkbox" id="streamResponse" ${settings.ai?.streamResponse ? 'checked' : ''}>
                             <span class="toggle-slider"></span>
-                            <span class="toggle-label">Stream Responses</span>
+                            <span class="toggle-label">Live Typing</span>
                         </label>
-                        <p class="setting-description">Show responses character by character as they're generated</p>
+                        <p class="control-description">Show responses character by character as they're generated</p>
                     </div>
 
                     <div class="setting-group">
@@ -110,7 +110,7 @@ class AISettings {
                     <h3 class="section-title">Prompt Templates</h3>
                     <div class="setting-group">
                         <label>Template Mode</label>
-                        <select id="templateMode">
+                        <select id="templateMode" class="select-control">
                             <option value="simple" ${settings.ai?.promptTemplate?.mode === 'simple' ? 'selected' : ''}>Simple</option>
                             <option value="basic" ${settings.ai?.promptTemplate?.mode === 'basic' ? 'selected' : ''}>Basic</option>
                             <option value="advanced" ${settings.ai?.promptTemplate?.mode === 'advanced' ? 'selected' : ''}>Advanced</option>
@@ -163,7 +163,7 @@ class AISettings {
                     <h3 class="section-title">Context Memory</h3>
                     <div class="setting-group">
                         <label>History Limit</label>
-                        <select id="contextLimit">
+                        <select id="contextLimit" class="select-control">
                             ${Array.from({length: 9}, (_, i) => i + 1).map(num => `
                                 <option value="${num}" ${num === settings.ai?.contextMemory?.limit ? 'selected' : ''}>
                                     ${num}
