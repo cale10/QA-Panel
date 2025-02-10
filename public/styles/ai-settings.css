@@ -3,8 +3,7 @@
 }
 
 .ai-settings .section-group {
-    margin-bottom: 2rem;
-    background-color: #2d2e31;
+    background-color: var(--background-color, #2d2e31);
     border-radius: 8px;
     padding: 1.5rem;
     border: 1px solid #444;
@@ -12,7 +11,7 @@
 }
 
 .ai-settings .section-title {
-    color: #ffa500;
+    color: var(--accent-color, #ffa500);
     margin: 0 0 1.5rem 0;
     font-size: 1.2rem;
     font-weight: 600;
@@ -38,7 +37,7 @@
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
-    color: #fff;
+    color: var(--text-color, #fff);
 }
 
 .ai-settings .control-description {
@@ -53,7 +52,7 @@
     padding: 0.75rem;
     background-color: #1e1e1e;
     border: 1px solid #444;
-    color: #fff;
+    color: var(--text-color, #fff);
     border-radius: 6px;
     font-size: 0.95rem;
     cursor: pointer;
@@ -66,9 +65,51 @@
 }
 
 .ai-settings .select-control:focus {
-    border-color: #ffa500;
+    border-color: var(--accent-color, #ffa500);
     outline: none;
     box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.2);
+}
+
+.ai-settings .model-info {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.ai-settings .model-info .model-name {
+    color: var(--accent-color, #ffa500);
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.ai-settings .model-info .model-description {
+    color: #aaa;
+    margin-bottom: 0.25rem;
+}
+
+.ai-settings .model-info .model-resolution {
+    color: #888;
+    font-size: 0.85rem;
+    font-family: monospace;
+}
+
+.ai-settings .model-info.upcoming {
+    border: 1px dashed var(--accent-color, #ffa500);
+    background-color: rgba(255, 165, 0, 0.1);
+}
+
+.ai-settings .model-info.upcoming::before {
+    content: "Coming Soon";
+    display: inline-block;
+    padding: 2px 6px;
+    background-color: var(--accent-color, #ffa500);
+    color: #000;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
 }
 
 .ai-settings textarea {
@@ -76,7 +117,7 @@
     padding: 0.75rem;
     background-color: #1e1e1e;
     border: 1px solid #444;
-    color: #fff;
+    color: var(--text-color, #fff);
     border-radius: 6px;
     margin-top: 0.25rem;
     font-size: 0.95rem;
@@ -92,17 +133,9 @@
 }
 
 .ai-settings textarea:focus {
-    border-color: #ffa500;
+    border-color: var(--accent-color, #ffa500);
     outline: none;
     box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.2);
-}
-
-.ai-settings #temperatureValue {
-    display: inline-block;
-    margin-left: 0.5rem;
-    min-width: 2em;
-    color: #ffa500;
-    font-weight: 500;
 }
 
 .ai-settings .error-message {
@@ -114,64 +147,18 @@
     color: #ff4444;
 }
 
-.ai-settings .error-message p {
-    margin: 0;
-    line-height: 1.5;
-}
-
 .ai-settings .error-message h3 {
     margin: 0 0 0.5rem 0;
     color: #ff6666;
 }
 
-.ai-settings .error-message p:last-child {
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
+.ai-settings .error-message p {
+    margin: 0;
+    line-height: 1.5;
 }
 
 .ai-settings .error-message ⚠️ {
     margin-right: 0.5rem;
-}
-
-/* Template descriptions */
-.ai-settings .template-description {
-    margin-top: 1rem;
-    padding: 1rem;
-    background-color: #1e1e1e;
-    border-radius: 6px;
-    border: 1px solid #444;
-}
-
-.ai-settings .template-mode-info {
-    opacity: 1;
-    transition: opacity 0.3s ease;
-}
-
-.ai-settings .template-mode-info.hidden {
-    display: none;
-    opacity: 0;
-}
-
-.ai-settings .template-mode-info h4 {
-    color: #ffa500;
-    margin: 0 0 0.5rem 0;
-    font-size: 1.1rem;
-}
-
-.ai-settings .template-mode-info p {
-    color: #ccc;
-    margin: 0 0 0.5rem 0;
-    line-height: 1.4;
-}
-
-.ai-settings .template-mode-info ul {
-    margin: 0;
-    padding-left: 1.5rem;
-    color: #aaa;
-}
-
-.ai-settings .template-mode-info li {
-    margin: 0.25rem 0;
 }
 
 /* Toggle Switch */
@@ -216,12 +203,12 @@
 
 .ai-settings .toggle-switch input:checked + .toggle-slider {
     background-color: rgba(255, 165, 0, 0.2);
-    border-color: #ffa500;
+    border-color: var(--accent-color, #ffa500);
 }
 
 .ai-settings .toggle-switch input:checked + .toggle-slider:before {
     transform: translateX(20px);
-    background-color: #ffa500;
+    background-color: var(--accent-color, #ffa500);
 }
 
 .ai-settings .toggle-switch:hover .toggle-slider {
@@ -239,14 +226,14 @@
 }
 
 .ai-settings .toggle-label {
-    color: #fff;
+    color: var(--text-color, #fff);
     font-weight: 500;
     font-size: 0.95rem;
     transition: color 0.2s ease;
 }
 
 .ai-settings .toggle-switch:hover .toggle-label {
-    color: #ffa500;
+    color: var(--accent-color, #ffa500);
 }
 
 /* Range input styling */
@@ -264,7 +251,7 @@
     -webkit-appearance: none;
     width: 20px;
     height: 20px;
-    background: #ffa500;
+    background: var(--accent-color, #ffa500);
     border-radius: 50%;
     cursor: pointer;
     border: none;
@@ -300,7 +287,7 @@
 }
 
 .ai-settings .template-editor label {
-    color: #ffa500;
+    color: var(--accent-color, #ffa500);
     font-weight: 600;
     margin-top: 1rem;
     display: block;

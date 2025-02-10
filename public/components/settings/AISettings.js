@@ -30,13 +30,13 @@ class AISettings {
             }
 
             // Separate models into regular and vision models
-            const regularModels = models.filter(m => !ollamaService.isVisionModel(m.name));
+            const regularModels = models.filter(m => ollamaService.isRegularModel(m.name));
             const visionModels = models.filter(m => ollamaService.isVisionModel(m.name));
 
             // If Ollama is not running, use default models
             if (!isOllamaRunning) {
                 regularModels.push({ name: 'llama2' });
-                visionModels.push({ name: 'llava:latest' });
+                visionModels.push({ name: 'minicpm-v:latest' });
             }
 
             this.element.innerHTML = `
@@ -61,10 +61,14 @@ class AISettings {
                         <select id="aiModel" class="select-control">
                             ${regularModels.map(model => `
                                 <option value="${model.name}" ${model.name === settings.ai?.model ? 'selected' : ''}>
-                                    ${model.name}
+                                    ${model.displayName || model.name}
                                 </option>
                             `).join('')}
                         </select>
+                        <div class="model-info">
+                            <div class="model-name">${regularModels.find(m => m.name === settings.ai?.model)?.displayName || settings.ai?.model}</div>
+                            <div class="model-description">${regularModels.find(m => m.name === settings.ai?.model)?.description || 'General purpose model'}</div>
+                        </div>
                         <p class="setting-description">Model to use for generating answers</p>
                     </div>
 
@@ -73,10 +77,15 @@ class AISettings {
                         <select id="visionModel" class="select-control">
                             ${visionModels.map(model => `
                                 <option value="${model.name}" ${model.name === settings.ai?.visionModel ? 'selected' : ''}>
-                                    ${model.name}
+                                    ${model.displayName || model.name}
                                 </option>
                             `).join('')}
                         </select>
+                        <div class="model-info ${ollamaService.isUpcomingModel(settings.ai?.visionModel) ? 'upcoming' : ''}">
+                            <div class="model-name">${visionModels.find(m => m.name === settings.ai?.visionModel)?.displayName || settings.ai?.visionModel}</div>
+                            <div class="model-description">${visionModels.find(m => m.name === settings.ai?.visionModel)?.description || 'Vision-capable model'}</div>
+                            <div class="model-resolution">Max Resolution: ${visionModels.find(m => m.name === settings.ai?.visionModel)?.maxResolution || 'Unknown'}</div>
+                        </div>
                         <p class="setting-description">Model to use for vision-related tasks</p>
                     </div>
 
@@ -165,9 +174,33 @@ class AISettings {
             const temperatureValue = this.element.querySelector('#temperatureValue');
             const templateMode = this.element.querySelector('#templateMode');
             const templateEditor = this.element.querySelector('.template-editor');
+            const aiModelSelect = this.element.querySelector('#aiModel');
+            const visionModelSelect = this.element.querySelector('#visionModel');
             
             temperatureInput.addEventListener('input', (e) => {
                 temperatureValue.textContent = e.target.value;
+            });
+
+            // Update model info when selection changes
+            aiModelSelect.addEventListener('change', (e) => {
+                const selectedModel = regularModels.find(m => m.name === e.target.value);
+                const modelInfo = this.element.querySelector('#aiModel').closest('.setting-group').querySelector('.model-info');
+                modelInfo.innerHTML = `
+                    <div class="model-name">${selectedModel?.displayName || e.target.value}</div>
+                    <div class="model-description">${selectedModel?.description || 'General purpose model'}</div>
+                `;
+            });
+
+            visionModelSelect.addEventListener('change', (e) => {
+                const selectedModel = visionModels.find(m => m.name === e.target.value);
+                const modelInfo = this.element.querySelector('#visionModel').closest('.setting-group').querySelector('.model-info');
+                const isUpcoming = ollamaService.isUpcomingModel(e.target.value);
+                modelInfo.className = `model-info ${isUpcoming ? 'upcoming' : ''}`;
+                modelInfo.innerHTML = `
+                    <div class="model-name">${selectedModel?.displayName || e.target.value}</div>
+                    <div class="model-description">${selectedModel?.description || 'Vision-capable model'}</div>
+                    <div class="model-resolution">Max Resolution: ${selectedModel?.maxResolution || 'Unknown'}</div>
+                `;
             });
 
             templateMode.addEventListener('change', (e) => {
@@ -188,9 +221,51 @@ class AISettings {
                 });
             });
 
-            // Save settings when any input changes
-            this.element.querySelectorAll('input, select, textarea').forEach(input => {
-                input.addEventListener('change', () => this.saveSettings());
+            // Add event listeners for model changes
+            aiModelSelect.addEventListener('change', async (e) => {
+                const selectedModel = regularModels.find(m => m.name === e.target.value);
+                const modelInfo = this.element.querySelector('#aiModel').closest('.setting-group').querySelector('.model-info');
+                modelInfo.innerHTML = `
+                    <div class="model-name">${selectedModel?.displayName || e.target.value}</div>
+                    <div class="model-description">${selectedModel?.description || 'General purpose model'}</div>
+                `;
+                await window.electronAPI.updateSettings({
+                    ...await window.electronAPI.getSettings(),
+                    ai: {
+                        ...settings.ai,
+                        model: e.target.value
+                    }
+                });
+            });
+
+            visionModelSelect.addEventListener('change', async (e) => {
+                const selectedModel = visionModels.find(m => m.name === e.target.value);
+                const modelInfo = this.element.querySelector('#visionModel').closest('.setting-group').querySelector('.model-info');
+                const isUpcoming = ollamaService.isUpcomingModel(e.target.value);
+                modelInfo.className = `model-info ${isUpcoming ? 'upcoming' : ''}`;
+                modelInfo.innerHTML = `
+                    <div class="model-name">${selectedModel?.displayName || e.target.value}</div>
+                    <div class="model-description">${selectedModel?.description || 'Vision-capable model'}</div>
+                    <div class="model-resolution">Max Resolution: ${selectedModel?.maxResolution || 'Unknown'}</div>
+                `;
+                await window.electronAPI.updateSettings({
+                    ...await window.electronAPI.getSettings(),
+                    ai: {
+                        ...settings.ai,
+                        visionModel: e.target.value
+                    }
+                });
+            });
+
+            // Save settings when other inputs change
+            this.element.querySelectorAll('input[type="checkbox"], input[type="range"], textarea').forEach(input => {
+                input.addEventListener('change', async () => {
+                    const currentSettings = await window.electronAPI.getSettings();
+                    await window.electronAPI.updateSettings({
+                        ...currentSettings,
+                        ai: this.getSettings()
+                    });
+                });
             });
         } catch (error) {
             console.error('Error creating AI settings:', error);
