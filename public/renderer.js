@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let streamingAnswer = '';
     let streamingInterval = null;
     let lastCapturedImage = null;
+    let typingSpeed = 1; // Characters per frame
 
     // Initialize memory controls
     memoryControlsDiv.appendChild(await memoryControls.getElement());
@@ -37,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             // Disable the button and show loading state
             captureBtn.disabled = true;
-            captureBtn.innerHTML = `<div class="loading-indicator"><div class="spinner"></div>Capturing...</div>`;
+            captureBtn.textContent = '📸 ...';
 
             // Hide the window
             await window.electronAPI.hideWindow();
@@ -61,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } finally {
             // Reset button state
             captureBtn.disabled = false;
-            captureBtn.innerHTML = `<span class="icon">📷</span>Capture Screen`;
+            captureBtn.textContent = '📸';
         }
     });
 
@@ -86,19 +87,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function startTypingAnimation() {
         let displayedChars = 0;
-        if (streamingInterval) clearInterval(streamingInterval);
+        if (streamingInterval) {
+            cancelAnimationFrame(streamingInterval);
+            streamingInterval = null;
+        }
 
-        streamingInterval = setInterval(() => {
+        // Add typing class for animation
+        answerInput.classList.add('typing');
+
+        const animate = () => {
             if (displayedChars < streamingAnswer.length) {
-                displayedChars++;
+                // Type multiple characters per frame for smoother animation
+                displayedChars = Math.min(displayedChars + typingSpeed, streamingAnswer.length);
                 answerInput.value = streamingAnswer.substring(0, displayedChars);
                 answerInput.scrollTop = answerInput.scrollHeight;
+                streamingInterval = requestAnimationFrame(animate);
             } else {
-                clearInterval(streamingInterval);
+                answerInput.classList.remove('typing');
+                cancelAnimationFrame(streamingInterval);
                 streamingInterval = null;
                 streamingAnswer = '';
             }
-        }, 10); // Adjust speed as needed
+        };
+
+        streamingInterval = requestAnimationFrame(animate);
     }
 
     settingsBtn.addEventListener('click', () => {
@@ -347,11 +359,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function applySettings(settings) {
-        document.body.style.backgroundColor = settings.backgroundColor;
-        document.body.style.fontFamily = settings.font;
-        document.body.style.fontSize = settings.fontSize;
-        document.body.style.color = settings.fontColor;
-        document.body.style.textShadow = settings.textShadow;
+        if (settings.theme) {
+            document.body.style.setProperty('--background-color', settings.theme.backgroundColor);
+            document.body.style.setProperty('--accent-color', settings.theme.accentColor);
+            document.body.style.setProperty('--text-color', settings.theme.textColor);
+            document.body.style.fontFamily = settings.font;
+            document.body.style.fontSize = settings.fontSize;
+        }
     }
 
     async function updateLastUsedApp() {

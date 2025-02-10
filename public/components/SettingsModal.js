@@ -3,9 +3,9 @@ class SettingsModal {
         this.modal = document.createElement('div');
         this.modal.className = 'modal-overlay';
         this.isVisible = false;
-        this.activeTab = 'appearance';
+        this.activeTab = 'theme';
+        this.themeSettings = new ThemeSettings();
         this.aiSettings = new AISettings();
-        this.capturingShortcut = false;
         this.createModal();
     }
 
@@ -18,21 +18,17 @@ class SettingsModal {
                 </div>
                 
                 <div class="settings-tabs">
-                    <button class="tab-button active" data-tab="appearance">
+                    <button class="tab-button active" data-tab="theme">
                         <span class="icon">🎨</span>
-                        <span>Appearance</span>
-                    </button>
-                    <button class="tab-button" data-tab="keyboard">
-                        <span class="icon">⌨️</span>
-                        <span>Keyboard</span>
+                        <span>Theme</span>
                     </button>
                     <button class="tab-button" data-tab="ai">
                         <span class="icon">🤖</span>
                         <span>AI Features</span>
                     </button>
-                    <button class="tab-button" data-tab="context">
-                        <span class="icon">📚</span>
-                        <span>Context</span>
+                    <button class="tab-button" data-tab="keyboard">
+                        <span class="icon">⌨️</span>
+                        <span>Keyboard</span>
                     </button>
                     <button class="tab-button" data-tab="advanced">
                         <span class="icon">⚙️</span>
@@ -41,41 +37,8 @@ class SettingsModal {
                 </div>
 
                 <div class="settings-content">
-                    <div class="tab-panel active" id="appearancePanel">
-                        <div class="section-group">
-                            <h3 class="section-title">Colors</h3>
-                            <div class="setting-group">
-                                <label>Background Color & Opacity</label>
-                                <input type="color" id="bgColorInput">
-                                <input type="range" id="bgOpacityInput" min="0" max="1" step="0.1">
-                            </div>
-                            <div class="setting-group">
-                                <label>Text Color</label>
-                                <input type="color" id="textColorInput">
-                            </div>
-                        </div>
-
-                        <div class="section-group">
-                            <h3 class="section-title">Typography</h3>
-                            <div class="setting-group">
-                                <label>Font Family</label>
-                                <select id="fontFamilyInput">
-                                    <option value="Arial">Arial</option>
-                                    <option value="Helvetica">Helvetica</option>
-                                    <option value="Times New Roman">Times New Roman</option>
-                                    <option value="Courier New">Courier New</option>
-                                </select>
-                            </div>
-                            <div class="setting-group">
-                                <label>Font Size</label>
-                                <select id="fontSizeInput">
-                                    <option value="12px">Small</option>
-                                    <option value="16px">Medium</option>
-                                    <option value="20px">Large</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="tab-panel active" id="themePanel"></div>
+                    <div class="tab-panel" id="aiPanel"></div>
 
                     <div class="tab-panel" id="keyboardPanel">
                         <div class="section-group">
@@ -105,31 +68,6 @@ class SettingsModal {
                         </div>
                     </div>
 
-                    <div class="tab-panel" id="aiPanel"></div>
-
-                    <div class="tab-panel" id="contextPanel">
-                        <div class="section-group">
-                            <h3 class="section-title">Memory Settings</h3>
-                            <div class="setting-group">
-                                <label>History Limit</label>
-                                <select id="historyLimitSelect">
-                                    ${Array.from({length: 9}, (_, i) => i + 1).map(num => 
-                                        `<option value="${num}">${num}</option>`
-                                    ).join('')}
-                                </select>
-                                <p class="setting-description">Number of previous Q&As to remember</p>
-                            </div>
-                            <div class="setting-group">
-                                <label>Sort Method</label>
-                                <select id="sortMethodSelect">
-                                    <option value="time">Chronological</option>
-                                    <option value="relevance">By Relevance</option>
-                                </select>
-                                <p class="setting-description">How to sort previous questions</p>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="tab-panel" id="advancedPanel">
                         <div class="section-group">
                             <h3 class="section-title">Data Management</h3>
@@ -142,6 +80,7 @@ class SettingsModal {
                             <h3 class="section-title">Updates</h3>
                             <div class="setting-group">
                                 <button class="action-button" id="checkUpdatesBtn">Check for Updates</button>
+                                <p class="setting-description">Note: Planning to upgrade to Llama 3.2 vision model</p>
                             </div>
                         </div>
                     </div>
@@ -153,6 +92,11 @@ class SettingsModal {
                 </div>
             </div>
         `;
+
+        // Add Theme settings panel
+        const themePanel = this.modal.querySelector('#themePanel');
+        const themeElement = await this.themeSettings.getElement();
+        themePanel.appendChild(themeElement);
 
         // Add AI settings panel
         const aiPanel = this.modal.querySelector('#aiPanel');
@@ -211,17 +155,9 @@ class SettingsModal {
         const importBtn = this.modal.querySelector('#importDataBtn');
         const updateBtn = this.modal.querySelector('#checkUpdatesBtn');
 
-        if (exportBtn) exportBtn.addEventListener('click', () => {
-            // TODO: Implement export functionality
-        });
-
-        if (importBtn) importBtn.addEventListener('click', () => {
-            // TODO: Implement import functionality
-        });
-
-        if (updateBtn) updateBtn.addEventListener('click', () => {
-            // TODO: Implement update check
-        });
+        if (exportBtn) exportBtn.addEventListener('click', () => this.exportData());
+        if (importBtn) importBtn.addEventListener('click', () => this.importData());
+        if (updateBtn) updateBtn.addEventListener('click', () => this.checkUpdates());
     }
 
     switchTab(tabName) {
@@ -302,17 +238,6 @@ class SettingsModal {
 
     async loadCurrentSettings() {
         const settings = await window.electronAPI.getSettings();
-        
-        // Load appearance settings
-        const bgColor = settings.backgroundColor.match(/rgba?\(([^)]+)\)/)[1].split(',');
-        const rgb = bgColor.slice(0, 3).map(x => parseInt(x.trim()));
-        const hex = '#' + rgb.map(x => x.toString(16).padStart(2, '0')).join('');
-        
-        this.modal.querySelector('#bgColorInput').value = hex;
-        this.modal.querySelector('#bgOpacityInput').value = parseFloat(bgColor[3]);
-        this.modal.querySelector('#fontFamilyInput').value = settings.font;
-        this.modal.querySelector('#fontSizeInput').value = settings.fontSize;
-        this.modal.querySelector('#textColorInput').value = settings.fontColor;
 
         // Load shortcuts
         Object.entries(settings.shortcuts).forEach(([name, value]) => {
@@ -322,43 +247,34 @@ class SettingsModal {
             }
         });
 
-        // Load context settings
-        if (settings.ai?.contextMemory) {
-            const historyLimit = this.modal.querySelector('#historyLimitSelect');
-            const sortMethod = this.modal.querySelector('#sortMethodSelect');
-            if (historyLimit) historyLimit.value = settings.ai.contextMemory.limit.toString();
-            if (sortMethod) sortMethod.value = settings.ai.contextMemory.sortByRelevance ? 'relevance' : 'time';
-        }
-
         // Load AI settings
         if (settings.ai) {
             await this.aiSettings.setSettings(settings.ai);
         }
+
+        // Load theme settings
+        if (settings.theme) {
+            await this.themeSettings.setSettings(settings.theme);
+        }
     }
 
     async saveSettings() {
-        const bgColor = this.modal.querySelector('#bgColorInput').value;
-        const opacity = this.modal.querySelector('#bgOpacityInput').value;
-        const r = parseInt(bgColor.substr(1,2), 16);
-        const g = parseInt(bgColor.substr(3,2), 16);
-        const b = parseInt(bgColor.substr(5,2), 16);
-        const backgroundColor = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-
-        const settings = {
-            backgroundColor,
-            font: this.modal.querySelector('#fontFamilyInput').value,
-            fontSize: this.modal.querySelector('#fontSizeInput').value,
-            fontColor: this.modal.querySelector('#textColorInput').value,
-            shortcuts: {},
-            ai: this.aiSettings.getSettings()
-        };
+        const settings = await window.electronAPI.getSettings();
 
         // Save shortcuts
+        const shortcuts = {};
         this.modal.querySelectorAll('[data-shortcut]').forEach(input => {
-            settings.shortcuts[input.dataset.shortcut] = input.textContent;
+            shortcuts[input.dataset.shortcut] = input.textContent;
         });
 
-        await window.electronAPI.updateSettings(settings);
+        const newSettings = {
+            ...settings,
+            shortcuts,
+            ai: this.aiSettings.getSettings(),
+            theme: this.themeSettings.getSettings()
+        };
+
+        await window.electronAPI.updateSettings(newSettings);
         this.hide();
         window.location.reload();
     }
@@ -372,6 +288,36 @@ class SettingsModal {
         };
 
         input.textContent = defaultShortcuts[shortcutName] || '';
+    }
+
+    async exportData() {
+        const { filePath } = await window.electronAPI.showSaveDialog({
+            title: 'Export Data',
+            defaultPath: 'qa-panel-backup.json',
+            filters: [{ name: 'JSON Files', extensions: ['json'] }]
+        });
+
+        if (filePath) {
+            await window.electronAPI.exportData(filePath);
+        }
+    }
+
+    async importData() {
+        const { filePaths } = await window.electronAPI.showOpenDialog({
+            title: 'Import Data',
+            filters: [{ name: 'JSON Files', extensions: ['json'] }],
+            properties: ['openFile']
+        });
+
+        if (filePaths && filePaths[0]) {
+            await window.electronAPI.importData(filePaths[0]);
+            window.location.reload();
+        }
+    }
+
+    async checkUpdates() {
+        // TODO: Implement update check
+        alert('Update check feature coming soon!\nPlanned upgrade: Llama 3.2 vision model');
     }
 }
 

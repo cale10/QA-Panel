@@ -1,0 +1,191 @@
+.theme-settings {
+    padding: 1rem;
+}
+
+.theme-settings .section-group {
+    background-color: var(--background-color, #2d2e31);
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid #444;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.theme-settings .section-title {
+    color: var(--accent-color, #ffa500);
+    margin: 0 0 1.5rem 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.theme-settings .setting-group {
+    margin-bottom: 1.5rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.theme-settings .setting-group:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.theme-settings .setting-group:last-child {
+    margin-bottom: 0;
+}
+
+.theme-settings .setting-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-color, #fff);
+}
+
+.theme-settings .setting-description {
+    font-size: 0.9rem;
+    color: #888;
+    margin: 0.5rem 0 0 0;
+    line-height: 1.4;
+}
+
+.theme-settings .color-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.theme-settings input[type="color"] {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.theme-settings input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.theme-settings input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 4px;
+}
+
+.theme-settings .color-text {
+    flex: 1;
+    padding: 0.5rem;
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+    color: var(--text-color, #fff);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.theme-settings .reset-color {
+    background: none;
+    border: 1px solid #444;
+    color: var(--text-color, #fff);
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.2s ease;
+}
+
+.theme-settings .reset-color:hover {
+    border-color: var(--accent-color, #ffa500);
+    color: var(--accent-color, #ffa500);
+}
+
+.theme-settings .select-control {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+    color: var(--text-color, #fff);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.theme-settings .select-control:hover {
+    border-color: #666;
+    background-color: #252525;
+}
+
+.theme-settings .select-control:focus {
+    border-color: var(--accent-color, #ffa500);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.2);
+}
+
+.theme-settings .preview-group {
+    margin-top: 2rem;
+}
+
+.theme-settings .theme-preview {
+    background-color: var(--preview-background, #202124);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    border: 1px solid #444;
+    transition: all 0.3s ease;
+}
+
+.theme-settings .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.theme-settings .preview-title {
+    font-weight: 500;
+}
+
+.theme-settings .preview-button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.theme-settings .preview-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.theme-settings .preview-input {
+    height: 30px;
+    border: 1px solid var(--accent-color, #ffa500);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-settings .error-message {
+    background-color: #3a1c1c;
+    border: 1px solid #ff4444;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    color: #ff4444;
+}
+
+.theme-settings .error-message h3 {
+    margin: 0 0 0.5rem 0;
+    color: #ff6666;
+}
+
+.theme-settings .error-message p {
+    margin: 0;
+    line-height: 1.5;
+}
