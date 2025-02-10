@@ -181,28 +181,6 @@ class AISettings {
                 temperatureValue.textContent = e.target.value;
             });
 
-            // Update model info when selection changes
-            aiModelSelect.addEventListener('change', (e) => {
-                const selectedModel = regularModels.find(m => m.name === e.target.value);
-                const modelInfo = this.element.querySelector('#aiModel').closest('.setting-group').querySelector('.model-info');
-                modelInfo.innerHTML = `
-                    <div class="model-name">${selectedModel?.displayName || e.target.value}</div>
-                    <div class="model-description">${selectedModel?.description || 'General purpose model'}</div>
-                `;
-            });
-
-            visionModelSelect.addEventListener('change', (e) => {
-                const selectedModel = visionModels.find(m => m.name === e.target.value);
-                const modelInfo = this.element.querySelector('#visionModel').closest('.setting-group').querySelector('.model-info');
-                const isUpcoming = ollamaService.isUpcomingModel(e.target.value);
-                modelInfo.className = `model-info ${isUpcoming ? 'upcoming' : ''}`;
-                modelInfo.innerHTML = `
-                    <div class="model-name">${selectedModel?.displayName || e.target.value}</div>
-                    <div class="model-description">${selectedModel?.description || 'Vision-capable model'}</div>
-                    <div class="model-resolution">Max Resolution: ${selectedModel?.maxResolution || 'Unknown'}</div>
-                `;
-            });
-
             templateMode.addEventListener('change', (e) => {
                 // Update template editor visibility
                 if (e.target.value === 'advanced') {
