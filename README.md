@@ -6,14 +6,13 @@ QA-Panel is an innovative desktop application built with Electron, designed to s
 
 - **Context-Aware Q&A Management**: Automatically associates questions and answers with the application you're currently using.
 - **AI-Powered Answers**: Generate answers automatically using Ollama's language models.
-- **Smart Context Memory**: AI considers previous Q&As when generating answers, with configurable history limits and relevance sorting.
-- **Vision Model Support**: Use vision-capable models like Llava for image-related questions.
+- **Vision Model Support**: Use vision-capable models like MiniCPM-V for image-related questions.
 - **Customizable Global Shortcuts**: Quick access to key functions without interrupting your workflow.
 - **Enhanced Keyboard Navigation**: Efficiently manage your Q&A entries using keyboard shortcuts.
-- **Transparent and Frameless Interface**: Sleek, modern design with a dark theme that doesn't obstruct your view.
+- **Transparent and Frameless Interface**: Sleek, modern design with customizable themes.
 - **Persistent Data Storage**: Your Q&A data and settings are automatically saved and persist between sessions.
 - **Import/Export Functionality**: Easily backup or transfer your data.
-- **Customizable Appearance**: Adjust the app's look to suit your preferences.
+- **Customizable Appearance**: Adjust the app's look with light and dark themes.
 - **System Tray Integration**: Access the app quickly from your system tray.
 
 ## Key Shortcuts (Default)
@@ -40,7 +39,7 @@ QA-Panel is an innovative desktop application built with Electron, designed to s
    ollama pull llama2
 
    # For vision-related questions (optional)
-   ollama pull llava
+   ollama pull minicpm-v
    ```
 
 ## Installation
@@ -78,35 +77,35 @@ npm run build
 Enable automatic answer generation when adding new questions. The AI will:
 - Use the selected language model (default: llama2)
 - Consider the current application context
-- Reference previous Q&As if context memory is enabled
-
-### Context Memory
-Configure how the AI uses previous questions and answers:
-- Enable/disable context memory
-- Set the number of previous Q&As to remember (1-9)
-- Choose between chronological or relevance-based sorting
+- Use template-based prompting for consistent responses
 
 ### Vision Support
-When using vision-capable models like Llava:
-- Capture and analyze screenshots
+When using vision-capable models like MiniCPM-V:
+- Capture and analyze screenshots with auto-capture option
 - Generate answers based on visual content
-- Combine visual and textual context
+- Support for high-resolution images (up to 2048x2048)
+
+### Prompt Templates
+Choose from three template modes:
+- **Simple**: Direct question and answer format
+- **Basic**: Smart AI responses with automatic context awareness
+- **Advanced**: Full control over system prompts and custom instructions
 
 ## Customization
 
 ### Appearance
 Customize the app's appearance through the settings menu:
-- Background color and opacity
-- Font family and size
-- Text color
-- Text shadow effects
+- Choose between light and dark themes
+- Create and save custom themes
+- Adjust colors and visual elements
+- Preview theme changes in real-time
 
 ### AI Settings
 Configure AI behavior in the settings menu:
 - Choose primary and vision models
 - Adjust temperature for creativity vs. precision
-- Configure context memory settings
-- Enable/disable auto-answer feature
+- Enable/disable auto-answer and auto-capture features
+- Configure prompt templates and instructions
 
 ### Shortcuts
 All global shortcuts can be customized in the settings menu to suit your workflow.

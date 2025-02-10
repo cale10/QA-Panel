@@ -240,7 +240,7 @@ class SettingsModal {
         const settings = await window.electronAPI.getSettings();
 
         // Load shortcuts
-        Object.entries(settings.shortcuts).forEach(([name, value]) => {
+        Object.entries(settings.shortcuts || {}).forEach(([name, value]) => {
             const input = this.modal.querySelector(`[data-shortcut="${name}"]`);
             if (input) {
                 input.textContent = value;

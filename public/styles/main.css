@@ -1,0 +1,348 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+/* Header */
+.app-header {
+    text-align: center;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.app-title {
+    font-size: 24px;
+    color: var(--accent-color);
+    margin: 0;
+}
+
+.last-used-app {
+    font-size: 14px;
+    color: var(--accent-color);
+    margin: 5px 0;
+}
+
+.header-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Form */
+#questionForm {
+    margin-bottom: 20px;
+}
+
+.input-group {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.input-group .icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #888;
+    font-size: 16px;
+    pointer-events: none;
+}
+
+#questionInput {
+    width: 100%;
+    padding: 12px 40px 12px 35px;
+    background-color: var(--secondary-background-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+#questionInput:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.2);
+    outline: none;
+}
+
+#answerInput {
+    width: 100%;
+    min-height: 120px;
+    padding: 15px;
+    background-color: var(--secondary-background-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    resize: vertical;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.5;
+    font-family: 'Consolas', monospace;
+    transition: all 0.2s ease;
+}
+
+#answerInput:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.2);
+    outline: none;
+}
+
+#answerInput.typing {
+    border-color: var(--accent-color);
+    animation: typing-pulse 1s infinite;
+}
+
+@keyframes typing-pulse {
+    0% { border-color: var(--accent-color); }
+    50% { border-color: var(--border-color); }
+    100% { border-color: var(--accent-color); }
+}
+
+#submitBtn {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--accent-color);
+    color: var(--background-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#submitBtn:hover {
+    opacity: 0.9;
+}
+
+/* Question List */
+#questionList {
+    list-style: none;
+    padding: 0;
+}
+
+#questionList li {
+    background-color: var(--secondary-background-color);
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.question-number {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    background-color: var(--accent-color);
+    color: var(--background-color);
+    text-align: center;
+    line-height: 24px;
+    border-radius: 12px;
+    margin-right: 10px;
+}
+
+.question-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.edit-btn, .delete-btn, .ai-answer-btn {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.edit-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.delete-btn {
+    background-color: #f44336;
+    color: white;
+}
+
+.ai-answer-btn {
+    background-color: #2196F3;
+    color: white;
+}
+
+#settingsBtn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--accent-color);
+}
+
+/* Badges */
+.ai-generated-badge, .reference-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.ai-generated-badge {
+    background-color: #2196F3;
+    color: white;
+}
+
+.reference-badge {
+    background-color: #9C27B0;
+    color: white;
+}
+
+/* Loading */
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Capture Preview */
+.capture-preview {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 200px;
+    height: 150px;
+    background-color: var(--secondary-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    display: none;
+}
+
+.capture-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.capture-preview .close-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Auto-capture settings */
+.capture-settings {
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 6px;
+    background-color: var(--secondary-background-color);
+    border: 1px solid var(--border-color);
+}
+
+.capture-settings .toggle-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    padding-left: 56px;
+    user-select: none;
+}
+
+.capture-settings .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.capture-settings .toggle-slider {
+    position: absolute;
+    left: 0;
+    width: 44px;
+    height: 24px;
+    background-color: var(--input-background-color);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    border-radius: 24px;
+}
+
+.capture-settings .toggle-slider:before {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #666;
+    transition: all 0.3s ease;
+    border-radius: 50%;
+}
+
+.capture-settings .toggle-switch input:checked + .toggle-slider {
+    background-color: rgba(255, 165, 0, 0.2);
+    border-color: var(--accent-color);
+}
+
+.capture-settings .toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+    background-color: var(--accent-color);
+}
+
+.capture-settings .toggle-switch:hover .toggle-slider {
+    border-color: #666;
+    box-shadow: 0 0 5px var(--shadow-color);
+}
+
+.capture-settings .toggle-switch input:checked:hover + .toggle-slider {
+    border-color: #ffb52e;
+    background-color: rgba(255, 165, 0, 0.25);
+}
+
+.capture-settings .toggle-switch input:focus + .toggle-slider {
+    box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.2);
+}
+
+.capture-settings .toggle-label {
+    color: var(--text-color);
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: color 0.2s ease;
+}
+
+.capture-settings .toggle-switch:hover .toggle-label {
+    color: var(--accent-color);
+}
+
+.capture-settings .control-description {
+    font-size: 0.9rem;
+    color: #888;
+    margin: 0.5rem 0 0 56px;
+    line-height: 1.4;
+}

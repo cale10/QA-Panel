@@ -6,25 +6,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     const submitBtn = document.getElementById('submitBtn');
     const lastUsedAppDiv = document.getElementById('lastUsedApp');
     const settingsBtn = document.getElementById('settingsBtn');
-    const memoryControlsDiv = document.getElementById('memoryControls');
-    const captureBtn = document.getElementById('captureBtn');
+    const autoCapture = document.getElementById('autoCapture');
     const capturePreview = document.querySelector('.capture-preview');
     const capturePreviewImg = document.getElementById('capturePreview');
     const captureCloseBtn = document.querySelector('.capture-preview .close-btn');
+
+    // Initialize theme service
+    let themeService;
+    try {
+        themeService = new ThemeService();
+        await themeService.waitForInit();
+    } catch (error) {
+        console.error('Error initializing theme service:', error);
+        // Use default theme if service fails
+        document.documentElement.style.setProperty('--background-color', '#202124');
+        document.documentElement.style.setProperty('--secondary-background-color', '#2d2e31');
+        document.documentElement.style.setProperty('--accent-color', '#ffa500');
+        document.documentElement.style.setProperty('--text-color', '#ffffff');
+        document.documentElement.style.setProperty('--border-color', '#444444');
+        document.documentElement.style.setProperty('--input-background-color', '#1e1e1e');
+        document.documentElement.style.setProperty('--hover-background-color', 'rgba(255, 255, 255, 0.03)');
+        document.documentElement.style.setProperty('--shadow-color', 'rgba(0, 0, 0, 0.2)');
+    }
 
     let editingId = null;
     let currentQuestions = [];
     let isEditing = false;
     let settingsModal = null;
     let ollamaService = new OllamaService();
-    let memoryControls = new MemoryControls();
     let streamingAnswer = '';
     let streamingInterval = null;
     let lastCapturedImage = null;
     let typingSpeed = 1; // Characters per frame
 
-    // Initialize memory controls
-    memoryControlsDiv.appendChild(await memoryControls.getElement());
+    // Load auto-capture setting
+    const settings = await window.electronAPI.getSettings();
+    autoCapture.checked = settings.ai?.autoCapture || false;
+
+    // Save auto-capture setting
+    autoCapture.addEventListener('change', async () => {
+        const currentSettings = await window.electronAPI.getSettings();
+        await window.electronAPI.updateSettings({
+            ...currentSettings,
+            ai: {
+                ...currentSettings.ai,
+                autoCapture: autoCapture.checked
+            }
+        });
+    });
 
     // Load existing questions and settings
     await Promise.all([
@@ -33,13 +62,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateLastUsedApp()
     ]);
 
-    // Screen capture handling
-    captureBtn.addEventListener('click', async () => {
+    // Screen capture function
+    async function captureScreen() {
         try {
-            // Disable the button and show loading state
-            captureBtn.disabled = true;
-            captureBtn.textContent = '📸 ...';
-
             // Hide the window
             await window.electronAPI.hideWindow();
 
@@ -59,12 +84,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             console.error('Error capturing screen:', error);
             alert('Failed to capture screen: ' + error.message);
-        } finally {
-            // Reset button state
-            captureBtn.disabled = false;
-            captureBtn.textContent = '📸';
         }
-    });
+    }
 
     captureCloseBtn.addEventListener('click', () => {
         capturePreview.style.display = 'none';
@@ -122,6 +143,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     questionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const settings = await window.electronAPI.getSettings();
+        if (settings.ai?.autoCapture) {
+            await captureScreen();
+        }
         await addOrUpdateQuestion();
     });
 

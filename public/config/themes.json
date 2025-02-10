@@ -1,0 +1,27 @@
+{
+  "themes": {
+    "dark": {
+      "name": "Dark Theme",
+      "backgroundColor": "#202124",
+      "accentColor": "#ffa500",
+      "textColor": "#ffffff",
+      "secondaryBackgroundColor": "#2d2e31",
+      "borderColor": "#444444",
+      "inputBackgroundColor": "#1e1e1e",
+      "hoverBackgroundColor": "rgba(255, 255, 255, 0.03)",
+      "shadowColor": "rgba(0, 0, 0, 0.2)"
+    },
+    "light": {
+      "name": "Light Theme",
+      "backgroundColor": "#ffffff",
+      "accentColor": "#ffa500",
+      "textColor": "#202124",
+      "secondaryBackgroundColor": "#f5f5f5",
+      "borderColor": "#e0e0e0",
+      "inputBackgroundColor": "#ffffff",
+      "hoverBackgroundColor": "rgba(0, 0, 0, 0.03)",
+      "shadowColor": "rgba(0, 0, 0, 0.1)"
+    }
+  },
+  "customThemes": {}
+}

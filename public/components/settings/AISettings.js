@@ -33,10 +33,23 @@ class AISettings {
             const regularModels = models.filter(m => ollamaService.isRegularModel(m.name));
             const visionModels = models.filter(m => ollamaService.isVisionModel(m.name));
 
-            // If Ollama is not running, use default models
-            if (!isOllamaRunning) {
-                regularModels.push({ name: 'llama2' });
-                visionModels.push({ name: 'minicpm-v:latest' });
+            // If Ollama is not running or no models found, use default models
+            if (!isOllamaRunning || models.length === 0) {
+                if (!regularModels.find(m => m.name === 'llama2')) {
+                    regularModels.push({ 
+                        name: 'llama2',
+                        displayName: 'Llama 2',
+                        description: 'General purpose model optimized for dialogue and text generation'
+                    });
+                }
+                if (!visionModels.find(m => m.name === 'minicpm-v')) {
+                    visionModels.push({ 
+                        name: 'minicpm-v',
+                        displayName: 'MiniCPM Vision',
+                        description: 'Current vision model',
+                        maxResolution: '2048x2048'
+                    });
+                }
             }
 
             this.element.innerHTML = `
@@ -105,6 +118,15 @@ class AISettings {
                             <span class="toggle-label">Live Typing</span>
                         </label>
                         <p class="control-description">Show responses character by character as they're generated</p>
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="autoCapture" ${settings.ai?.autoCapture ? 'checked' : ''}>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Auto-capture Screen</span>
+                        </label>
+                        <p class="control-description">Automatically capture screen when asking questions</p>
                     </div>
 
                     <div class="setting-group">
@@ -263,6 +285,7 @@ class AISettings {
         const visionModel = this.element.querySelector('#visionModel');
         const autoAnswer = this.element.querySelector('#autoAnswer');
         const streamResponse = this.element.querySelector('#streamResponse');
+        const autoCapture = this.element.querySelector('#autoCapture');
         const temperature = this.element.querySelector('#temperature');
         const templateMode = this.element.querySelector('#templateMode');
         const systemPrompt = this.element.querySelector('#systemPrompt');
@@ -276,6 +299,7 @@ class AISettings {
             visionModel: visionModel.value,
             autoAnswer: autoAnswer.checked,
             streamResponse: streamResponse.checked,
+            autoCapture: autoCapture.checked,
             temperature: parseFloat(temperature.value),
             promptTemplate: {
                 mode: templateMode.value,
@@ -329,6 +353,8 @@ Instructions:
         if (visionModel) visionModel.value = settings.visionModel;
         if (autoAnswer) autoAnswer.checked = settings.autoAnswer;
         if (streamResponse) streamResponse.checked = settings.streamResponse;
+        const autoCapture = this.element.querySelector('#autoCapture');
+        if (autoCapture) autoCapture.checked = settings.autoCapture || false;
         if (temperature) {
             temperature.value = settings.temperature;
             temperatureValue.textContent = settings.temperature;

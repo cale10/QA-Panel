@@ -14,7 +14,7 @@ class MemoryControls {
                     <label class="toggle-switch">
                         <input type="checkbox" id="memoryEnabled" checked>
                         <span class="toggle-slider"></span>
-                        <span class="toggle-label">Smart History</span>
+                        <span class="toggle-label">Context Memory</span>
                     </label>
                     <p class="control-description">Learn from previous interactions to provide better answers</p>
                 </div>
@@ -43,8 +43,7 @@ class MemoryControls {
                     ...settings.ai,
                     contextMemory: {
                         enabled: this.element.querySelector('#memoryEnabled').checked,
-                        limit: 5,
-                        sortByRelevance: false
+                        limit: 5
                     }
                 }
             };
