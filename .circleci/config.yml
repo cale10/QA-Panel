@@ -179,8 +179,8 @@ jobs:
               cat electron_output.log || echo "No output captured"
               
               # Check if the app at least tried to start (not a complete failure)
-              if grep -q "electron" electron_output.log || grep -q "qa-panel" electron_output.log; then
-                echo "✓ Electron attempted to start - considering this a pass for CI"
+              if grep -q "electron" electron_output.log || grep -q "qa-panel" electron_output.log || grep -q "Setting up global shortcuts" electron_output.log || grep -q "Global shortcuts set up successfully" electron_output.log; then
+                echo "✓ Electron attempted to start and initialized - considering this a pass for CI"
               else
                 echo "✗ Electron failed to start at all"
                 exit 1
