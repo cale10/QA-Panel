@@ -1,0 +1,133 @@
+name: Rerun CircleCI via ChatOps
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+jobs:
+  rerun:
+    if: startsWith(github.event.comment.body, '/rerun-ci')
+    runs-on: ubuntu-latest
+    env:
+      CIRCLECI_TOKEN: ${{ secrets.CIRCLECI_TOKEN }}
+      CIRCLECI_API: https://circleci.com/api/v2
+    steps:
+      - name: Validate environment
+        run: |
+          if [ -z "${CIRCLECI_TOKEN}" ]; then
+            echo "::error::Missing CIRCLECI_TOKEN secret. Add it in GitHub > Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+          if [ -z "${{ github.event.issue.pull_request.url }}" ]; then
+            echo "::error::This command only works on PR comments."
+            exit 1
+          fi
+
+      - name: Get PR details
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.issue.number;
+            const {owner, repo} = context.repo;
+            const pr = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
+            core.setOutput('head_ref', pr.data.head.ref);
+            core.setOutput('head_sha', pr.data.head.sha);
+            core.setOutput('head_repo_owner', pr.data.head.repo.owner.login);
+            core.setOutput('head_repo_name', pr.data.head.repo.name);
+
+      - name: Compute CircleCI project/branch
+        id: meta
+        run: |
+          echo "branch=${{ steps.pr.outputs.head_ref }}" >> $GITHUB_OUTPUT
+          echo "owner=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+          echo "repo=${{ steps.pr.outputs.head_repo_name }}" >> $GITHUB_OUTPUT
+          echo "project_slug=gh/${{ github.repository_owner }}/${{ steps.pr.outputs.head_repo_name }}" >> $GITHUB_OUTPUT
+
+      - name: Decide mode (fresh vs from_failed)
+        id: mode
+        run: |
+          body='${{ github.event.comment.body }}'
+          if echo "$body" | grep -qiE '^/rerun-ci +failed'; then
+            echo "mode=from_failed" >> $GITHUB_OUTPUT
+          else
+            echo "mode=fresh" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger fresh pipeline
+        if: steps.mode.outputs.mode == 'fresh'
+        id: trigger
+        run: |
+          echo "Triggering pipeline for branch ${{ steps.meta.outputs.branch }} on ${{ steps.meta.outputs.project_slug }}"
+          resp=$(curl -sS -X POST "${CIRCLECI_API}/project/${{ steps.meta.outputs.project_slug }}/pipeline" \
+            -H "Circle-Token: ${CIRCLECI_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"branch\": \"${{ steps.meta.outputs.branch }}\"}")
+          echo "$resp" | jq .
+          pipe_id=$(echo "$resp" | jq -r .id)
+          if [ -z "$pipe_id" ] || [ "$pipe_id" = "null" ]; then
+            echo "::error::Failed to trigger CircleCI pipeline"
+            exit 1
+          fi
+          echo "pipeline_id=$pipe_id" >> $GITHUB_OUTPUT
+
+      - name: Rerun latest workflow from failed
+        if: steps.mode.outputs.mode == 'from_failed'
+        id: rerun
+        run: |
+          set -e
+          project='${{ steps.meta.outputs.project_slug }}'
+          branch='${{ steps.meta.outputs.branch }}'
+          # Get latest pipeline for branch
+          pipes=$(curl -sS -H "Circle-Token: ${CIRCLECI_TOKEN}" "${CIRCLECI_API}/project/${project}/pipeline?branch=${branch}")
+          pipe_id=$(echo "$pipes" | jq -r '.items[0].id')
+          if [ -z "$pipe_id" ] || [ "$pipe_id" = "null" ]; then
+            echo "::error::No pipelines found for ${branch}"
+            exit 1
+          fi
+          # Get workflows for pipeline
+          wfs=$(curl -sS -H "Circle-Token: ${CIRCLECI_TOKEN}" "${CIRCLECI_API}/pipeline/${pipe_id}/workflow")
+          wf_id=$(echo "$wfs" | jq -r '.items[0].id')
+          if [ -z "$wf_id" ] || [ "$wf_id" = "null" ]; then
+            echo "::error::No workflows found for pipeline ${pipe_id}"
+            exit 1
+          fi
+          # Rerun from failed
+          resp=$(curl -sS -X POST -H "Circle-Token: ${CIRCLECI_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"from_failed": true}' \
+            "${CIRCLECI_API}/workflow/${wf_id}/rerun")
+          echo "$resp" | jq .
+          new_wf_id=$(echo "$resp" | jq -r '.id // .workflow.id // empty')
+          echo "workflow_id=$new_wf_id" >> $GITHUB_OUTPUT
+
+      - name: Comment result
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const core = require('@actions/core');
+            const mode = process.env.MODE || '${{ steps.mode.outputs.mode }}';
+            const owner = '${{ github.repository_owner }}';
+            const repo = '${{ steps.meta.outputs.repo }}';
+            const branch = '${{ steps.meta.outputs.branch }}';
+            const projectSlug = '${{ steps.meta.outputs.project_slug }}';
+            let msg;
+            if (mode === 'fresh') {
+              const pipeId = '${{ steps.trigger.outputs.pipeline_id }}';
+              msg = `✅ Triggered CircleCI pipeline for \`${branch}\`\n\nPipeline: https://app.circleci.com/pipelines/${projectSlug}/${'${{ steps.trigger.outputs.pipeline_id }}' ? '' : ''}\n(If link above shows a 404, check the Pipelines tab)`;
+            } else {
+              const wfId = '${{ steps.rerun.outputs.workflow_id }}';
+              msg = `✅ Requested rerun from failed for latest workflow on \`${branch}\`\n\nWorkflow: https://app.circleci.com/pipelines/${projectSlug} (open latest & view workflows)`;
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: msg
+            });
+
