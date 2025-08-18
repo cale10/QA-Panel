@@ -6,11 +6,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitBtn = document.getElementById('submitBtn');
     const lastUsedAppDiv = document.getElementById('lastUsedApp');
     const settingsBtn = document.getElementById('settingsBtn');
+    const notification = document.getElementById('notification');
 
     let editingId = null;
     let currentQuestions = [];
     let isEditing = false;
     let settingsModal = null;
+    let lastFocusedBeforeSettings = null;
 
     // Shortcuts overlay elements
     const shortcutsOverlay = document.getElementById('shortcutsOverlay');
@@ -60,11 +62,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Settings button opens modal and stores focus return target
     settingsBtn.addEventListener('click', () => {
+        lastFocusedBeforeSettings = document.activeElement || settingsBtn;
         if (!settingsModal) {
             settingsModal = new SettingsModal();
         }
         settingsModal.show();
+        // Announce opening
+        announce('Settings opened');
+        // When modal closes, return focus
+        const originalHide = settingsModal.hide.bind(settingsModal);
+        settingsModal.hide = () => {
+            originalHide();
+            if (lastFocusedBeforeSettings && typeof lastFocusedBeforeSettings.focus === 'function') {
+                lastFocusedBeforeSettings.focus();
+                announce('Returned focus to previous element');
+            }
+        };
     });
     // Overlay restore defaults button
     const restoreShortcutsBtn = document.getElementById('restoreShortcutsBtn');
@@ -113,17 +128,30 @@ document.addEventListener('DOMContentLoaded', () => {
         isEditing = false;
     });
 
+    function announce(message) {
+        if (notification) {
+            notification.textContent = message;
+        }
+    }
+
     async function addOrUpdateQuestion() {
         const question = questionInput.value.trim();
         const answer = answerInput.value.trim();
 
-        if (question) {
+        if (!question) {
+            announce('Please enter a question.');
+            return;
+        }
+
+        try {
             if (editingId) {
                 await window.electronAPI.updateQuestion(editingId, question, answer);
                 editingId = null;
                 submitBtn.textContent = 'Add Question';
+                announce('Question updated');
             } else {
                 await window.electronAPI.addQuestion(question, answer);
+                announce('Question added');
             }
             questionInput.value = '';
             answerInput.value = '';
@@ -136,45 +164,70 @@ document.addEventListener('DOMContentLoaded', () => {
                     lastQuestion.focus();
                 }
             }
+        } catch (err) {
+            console.error(err);
+            announce('An error occurred while saving the question.');
         }
     }
 
     async function loadQuestions() {
-        currentQuestions = await window.electronAPI.getQuestions();
-        questionList.innerHTML = '';
-        if (currentQuestions.length === 0) {
-            questionList.innerHTML = '<p>No questions for this app yet.</p>';
-        } else {
-            currentQuestions.forEach((qa, index) => {
-                const li = document.createElement('li');
-                li.setAttribute('role', 'listitem');
-                li.setAttribute('aria-label', `Question ${index + 1}: ${qa.question}`);
-                li.innerHTML = `
-                    <span class="question-number" aria-hidden="true">${index + 1}</span>
-                    <strong>Q: ${qa.question}</strong>
-                    <p>A: ${qa.answer || 'Not answered yet'}</p>
-                    <div class="question-actions">
-                        <button class="edit-btn" data-id="${qa.id}" aria-label="Edit question ${index + 1}">Edit</button>
-                        <button class="delete-btn" data-id="${qa.id}" aria-label="Delete question ${index + 1}">Delete</button>
-                    </div>
-                `;
-                li.setAttribute('tabindex', '0');
-                li.dataset.id = qa.id;
-                questionList.appendChild(li);
-            });
+        try {
+            currentQuestions = await window.electronAPI.getQuestions();
+            questionList.innerHTML = '';
+            if (currentQuestions.length === 0) {
+                const p = document.createElement('p');
+                p.textContent = 'No questions for this app yet.';
+                p.setAttribute('role', 'note');
+                questionList.appendChild(p);
+            } else {
+                currentQuestions.forEach((qa, index) => {
+                    const li = document.createElement('li');
+                    li.setAttribute('role', 'listitem');
+                    li.setAttribute('tabindex', '0');
+                    li.setAttribute('aria-label', `Question ${index + 1}: ${qa.question}`);
+                    li.innerHTML = `
+                        <span class="question-number" aria-hidden="true">${index + 1}</span>
+                        <strong>Q: ${qa.question}</strong>
+                        <p>A: ${qa.answer || 'Not answered yet'}</p>
+                        <div class="question-actions">
+                            <button class="edit-btn" data-id="${qa.id}" aria-label="Edit question ${index + 1}">Edit</button>
+                            <button class="delete-btn" data-id="${qa.id}" aria-label="Delete question ${index + 1}">Delete</button>
+                        </div>
+                    `;
+                    li.dataset.id = qa.id;
+                    questionList.appendChild(li);
+                });
 
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => editQuestion(e.target.dataset.id));
-            });
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => deleteQuestion(e.target.dataset.id));
-            });
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => editQuestion(e.target.dataset.id));
+                });
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const id = e.target.dataset.id;
+                        try {
+                            await deleteQuestion(id);
+                            announce('Question deleted');
+                        } catch (err) {
+                            console.error(err);
+                            announce('Failed to delete question');
+                        }
+                    });
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            announce('Failed to load questions');
         }
     }
 
     async function loadSettings() {
-        const settings = await window.electronAPI.getSettings();
-        applySettings(settings);
+        try {
+            const settings = await window.electronAPI.getSettings();
+            applySettings(settings);
+        } catch (err) {
+            console.error(err);
+            announce('Failed to load settings');
+        }
     }
 
     function applySettings(settings) {
@@ -186,8 +239,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function updateLastUsedApp() {
-        const lastUsedApp = await window.electronAPI.getLastUsedApp();
-        lastUsedAppDiv.textContent = `Last Used App: ${lastUsedApp || 'None'}`;
+        try {
+            const lastUsedApp = await window.electronAPI.getLastUsedApp();
+            lastUsedAppDiv.textContent = `Last Used App: ${lastUsedApp || 'None'}`;
+        } catch (err) {
+            console.error(err);
+            announce('Failed to update last used app');
+        }
     }
 
     async function editQuestion(id) {
@@ -203,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function deleteQuestion(id) {
         await window.electronAPI.deleteQuestion(parseInt(id));
-        loadQuestions();
+        await loadQuestions();
     }
 
     document.addEventListener('keydown', (e) => {
@@ -244,4 +302,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.electronAPI.onFocusNewQuestion(() => {
         questionInput.focus();
     });
+
+    // Deep linking to open settings via hash: #settings
+    if (window.location.hash === '#settings') {
+        settingsBtn.click();
+    }
 });
