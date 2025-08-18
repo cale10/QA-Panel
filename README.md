@@ -1,23 +1,25 @@
 # QA-Panel
 
-QA-Panel is an innovative desktop application built with Electron, designed to streamline the process of managing questions and answers across different applications. It provides a seamless, context-aware interface for capturing, organizing, and retrieving information.
+QA-Panel is an innovative desktop application built with Electron, designed to streamline the process of managing questions and answers across different applications. It provides a seamless, context-aware interface for capturing, organizing, and retrieving information, with integrated AI capabilities powered by Ollama.
 
 ## Features
 
 - **Context-Aware Q&A Management**: Automatically associates questions and answers with the application you're currently using.
+- **AI-Powered Answers**: Generate answers automatically using Ollama's language models.
+- **Vision Model Support**: Use vision-capable models like MiniCPM-V for image-related questions.
 - **Customizable Global Shortcuts**: Quick access to key functions without interrupting your workflow.
 - **Enhanced Keyboard Navigation**: Efficiently manage your Q&A entries using keyboard shortcuts.
-- **Transparent and Frameless Interface**: Sleek, modern design that doesn't obstruct your view.
-- **Persistent Data Storage**: Your Q&A data is automatically saved and persists between sessions.
+- **Transparent and Frameless Interface**: Sleek, modern design with customizable themes.
+- **Persistent Data Storage**: Your Q&A data and settings are automatically saved and persist between sessions.
 - **Import/Export Functionality**: Easily backup or transfer your data.
-- **Customizable Appearance**: Adjust the app's look to suit your preferences.
+- **Customizable Appearance**: Adjust the app's look with light and dark themes.
 - **System Tray Integration**: Access the app quickly from your system tray.
 
 ## Key Shortcuts (Default)
 
 ### Global Shortcuts
-- Show/Hide App: `Ctrl+Shift+Space`
-- Focus on New Question: `Ctrl+Shift+N`
+- Show/Hide App: `Shift+Space`
+- Focus on New Question: `Shift+N`
 - Export Data: `Ctrl+Shift+E`
 - Import Data: `Ctrl+Shift+I`
 
@@ -28,18 +30,30 @@ QA-Panel is an innovative desktop application built with Electron, designed to s
 - Delete Focused Question: `d`
 - Unfocus Current Element: `Escape`
 
+## Prerequisites
+
+1. Install [Ollama](https://ollama.ai/) for AI features
+2. Pull required models:
+   ```bash
+   # For text-based questions
+   ollama pull llama2
+
+   # For vision-related questions (optional)
+   ollama pull minicpm-v
+   ```
+
 ## Installation
 
 1. Clone this repository:
-   ```
-   git clone https://github.com/yourusername/qa-panel.git
+   ```bash
+   git clone https://github.com/cale10/qa-panel.git
    ```
 2. Navigate to the project directory:
-   ```
+   ```bash
    cd qa-panel
    ```
 3. Install dependencies:
-   ```
+   ```bash
    npm install
    ```
 
@@ -47,23 +61,51 @@ QA-Panel is an innovative desktop application built with Electron, designed to s
 
 To start the application in development mode:
 
-```
+```bash
 npm start
 ```
 
 To build the application for production:
 
-```
+```bash
 npm run build
 ```
+
+## AI Features
+
+### Auto-Answer
+Enable automatic answer generation when adding new questions. The AI will:
+- Use the selected language model (default: llama2)
+- Consider the current application context
+- Use template-based prompting for consistent responses
+
+### Vision Support
+When using vision-capable models like MiniCPM-V:
+- Capture and analyze screenshots with auto-capture option
+- Generate answers based on visual content
+- Support for high-resolution images (up to 2048x2048)
+
+### Prompt Templates
+Choose from three template modes:
+- **Simple**: Direct question and answer format
+- **Basic**: Smart AI responses with automatic context awareness
+- **Advanced**: Full control over system prompts and custom instructions
 
 ## Customization
 
 ### Appearance
-You can customize the app's appearance through the settings menu, including:
-- Background color and opacity
-- Font family and size
-- Text color
+Customize the app's appearance through the settings menu:
+- Choose between light and dark themes
+- Create and save custom themes
+- Adjust colors and visual elements
+- Preview theme changes in real-time
+
+### AI Settings
+Configure AI behavior in the settings menu:
+- Choose primary and vision models
+- Adjust temperature for creativity vs. precision
+- Enable/disable auto-answer and auto-capture features
+- Configure prompt templates and instructions
 
 ### Shortcuts
 All global shortcuts can be customized in the settings menu to suit your workflow.
@@ -86,6 +128,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 - Built with [Electron](https://www.electronjs.org/)
 - Uses [electron-builder](https://www.electron.build/) for packaging and distribution
+- AI features powered by [Ollama](https://ollama.ai/)
 
 ---
 

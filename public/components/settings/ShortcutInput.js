@@ -1,65 +1,89 @@
-import React, { useState, useEffect, useCallback } from 'react';
+class ShortcutInput {
+    constructor(shortcutName, defaultValue) {
+        this.element = document.createElement('div');
+        this.element.className = 'shortcut-input';
+        this.shortcutName = shortcutName;
+        this.defaultValue = defaultValue;
+        this.createContent();
+    }
 
-const ShortcutInput = ({ name, value, onChange, onReset }) => {
-    const [isCapturing, setIsCapturing] = useState(false);
-    const [currentValue, setCurrentValue] = useState(value);
+    createContent() {
+        this.element.innerHTML = `
+            <div class="input-field" tabindex="0" data-shortcut="${this.shortcutName}">${this.defaultValue}</div>
+            <button class="reset-button">Reset</button>
+        `;
 
-    useEffect(() => {
-        setCurrentValue(value);
-    }, [value]);
+        this.setupEventListeners();
+    }
 
-    const handleKeyDown = useCallback((e) => {
-        if (!isCapturing) return;
+    setupEventListeners() {
+        const input = this.element.querySelector('.input-field');
+        const resetBtn = this.element.querySelector('.reset-button');
+
+        input.addEventListener('click', () => this.startCapture());
+        input.addEventListener('blur', () => this.stopCapture());
+        input.addEventListener('keydown', (e) => this.handleKeyDown(e));
+
+        resetBtn.addEventListener('click', () => this.reset());
+    }
+
+    startCapture() {
+        const input = this.element.querySelector('.input-field');
+        input.classList.add('capturing');
+        input.textContent = 'Press keys...';
+    }
+
+    stopCapture() {
+        const input = this.element.querySelector('.input-field');
+        input.classList.remove('capturing');
+        if (input.textContent === 'Press keys...') {
+            this.reset();
+        }
+    }
+
+    handleKeyDown(e) {
+        if (!this.element.querySelector('.capturing')) return;
 
         e.preventDefault();
-        
+        e.stopPropagation();
+
         const keys = [];
         if (e.ctrlKey) keys.push('Ctrl');
         if (e.shiftKey) keys.push('Shift');
         if (e.altKey) keys.push('Alt');
-        
-        // Add the main key if it's not a modifier
-        if (!['Control', 'Shift', 'Alt'].includes(e.key)) {
-            keys.push(e.key);
+        if (e.metaKey) keys.push('Meta');
+
+        const key = e.key;
+        if (!['Control', 'Shift', 'Alt', 'Meta'].includes(key)) {
+            keys.push(key.length === 1 ? key.toUpperCase() : key);
         }
 
         if (keys.length > 0) {
-            const shortcut = keys.join('+');
-            setCurrentValue(shortcut);
-            onChange(name, shortcut);
-            setIsCapturing(false);
+            const input = this.element.querySelector('.input-field');
+            input.textContent = keys.join(' + ');
+            input.classList.remove('capturing');
+            input.blur();
         }
-    }, [isCapturing, name, onChange]);
+    }
 
-    useEffect(() => {
-        if (isCapturing) {
-            window.addEventListener('keydown', handleKeyDown);
-            return () => window.removeEventListener('keydown', handleKeyDown);
-        }
-    }, [isCapturing, handleKeyDown]);
+    reset() {
+        const input = this.element.querySelector('.input-field');
+        input.textContent = this.defaultValue;
+        input.classList.remove('capturing');
+    }
 
-    return (
-        <div className="shortcut-input">
-            <label>{name}</label>
-            <div
-                className={`input-field ${isCapturing ? 'capturing' : ''}`}
-                tabIndex={0}
-                onClick={() => setIsCapturing(true)}
-                onBlur={() => setIsCapturing(false)}
-            >
-                {isCapturing ? 'Press shortcut...' : currentValue}
-            </div>
-            <button 
-                onClick={(e) => {
-                    e.preventDefault();
-                    onReset(name);
-                }}
-                className="reset-button"
-            >
-                Reset
-            </button>
-        </div>
-    );
-};
+    getValue() {
+        return this.element.querySelector('.input-field').textContent;
+    }
 
-export default ShortcutInput;
+    setValue(value) {
+        this.element.querySelector('.input-field').textContent = value;
+    }
+
+    getElement() {
+        return this.element;
+    }
+}
+
+// Export the class
+window.ShortcutInput = ShortcutInput;
