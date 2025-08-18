@@ -14,6 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let settingsModal = null;
     let lastFocusedBeforeSettings = null;
 
+    // Shortcuts overlay elements
+    const shortcutsOverlay = document.getElementById('shortcutsOverlay');
+    const closeShortcutsBtn = document.getElementById('closeShortcutsBtn');
+
     // Load existing questions and settings
     loadQuestions();
     loadSettings();
@@ -23,6 +27,39 @@ document.addEventListener('DOMContentLoaded', () => {
     window.electronAPI.onUpdateLastUsedApp((event, lastUsedApp) => {
         updateLastUsedApp();
         loadQuestions();
+    });
+
+    // Shortcuts overlay events
+    function showShortcutsOverlay() {
+        if (shortcutsOverlay) {
+            shortcutsOverlay.style.display = 'flex';
+            const modal = shortcutsOverlay.querySelector('.shortcuts-modal');
+            if (modal) modal.focus();
+        }
+    }
+
+    function hideShortcutsOverlay() {
+        if (shortcutsOverlay) {
+            shortcutsOverlay.style.display = 'none';
+        }
+    }
+
+    if (closeShortcutsBtn) {
+        closeShortcutsBtn.addEventListener('click', () => hideShortcutsOverlay());
+    }
+
+    // Handle tray "Show Shortcuts" action
+    if (window.electronAPI.onShowShortcutsOverlay) {
+        window.electronAPI.onShowShortcutsOverlay(() => {
+            showShortcutsOverlay();
+        });
+    }
+
+    // Allow Esc to close the overlay
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && shortcutsOverlay && shortcutsOverlay.style.display !== 'none') {
+            hideShortcutsOverlay();
+        }
     });
 
     // Settings button opens modal and stores focus return target
@@ -44,6 +81,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     });
+    // Overlay restore defaults button
+    const restoreShortcutsBtn = document.getElementById('restoreShortcutsBtn');
+    if (restoreShortcutsBtn) {
+        restoreShortcutsBtn.addEventListener('click', async () => {
+            // Reset global shortcuts to defaults via settings
+            const defaultShortcuts = {
+                toggleApp: 'Shift+Space',
+                newQuestion: 'Shift+N',
+                exportData: 'Ctrl+Shift+E',
+                importData: 'Ctrl+Shift+I'
+            };
+            const currentSettings = await window.electronAPI.getSettings();
+            await window.electronAPI.updateSettings({ shortcuts: defaultShortcuts });
+            hideShortcutsOverlay();
+        });
+    }
+
 
     questionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -130,6 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const li = document.createElement('li');
                     li.setAttribute('role', 'listitem');
                     li.setAttribute('tabindex', '0');
+                    li.setAttribute('aria-label', `Question ${index + 1}: ${qa.question}`);
                     li.innerHTML = `
                         <span class="question-number" aria-hidden="true">${index + 1}</span>
                         <strong>Q: ${qa.question}</strong>
@@ -219,6 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const index = parseInt(e.key) - 1;
             if (index < currentQuestions.length) {
+
                 const li = questionList.children[index];
                 li.focus();
             }
