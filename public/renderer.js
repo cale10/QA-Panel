@@ -101,129 +101,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // SCRUM-5: Non-blocking generation
-    let abortGen = null;
-
+    // Minimal Generate flow using Ollama via IPC
     generateBtn.addEventListener('click', async () => {
-        if (!questionInput.value.trim()) {
+        const prompt = questionInput.value.trim();
+        if (!prompt) {
             questionInput.focus();
             return;
         }
-        // Setup UI state
+        // UI state
         spinnerEl.hidden = false;
-        cancelGenBtn.hidden = false;
         generateBtn.disabled = true;
         generateStatus.textContent = 'Generating...';
-
-        // Simulated async generation with AbortController
-        const controller = new AbortController();
-        abortGen = () => controller.abort();
-
         try {
-            const answer = await simulateGeneration(questionInput.value.trim(), { signal: controller.signal });
-            if (!controller.signal.aborted) {
-                answerInput.value = answer;
-                generateStatus.textContent = 'Done';
+            const resp = await window.electronAPI.ollamaGenerate(prompt, { manual: true });
+            if (resp?.skipped) {
+                generateStatus.textContent = 'Manual generate required (enable in settings)';
+            } else if (resp?.error) {
+                console.error(resp.error);
+                generateStatus.textContent = 'Error generating';
+            } else {
+                const text = resp?.response ?? resp?.raw ?? '';
+                if (text) {
+                    answerInput.value = text;
+                    generateStatus.textContent = 'Done';
+                } else {
+                    generateStatus.textContent = 'No response';
+                }
             }
         } catch (err) {
-            if (controller.signal.aborted) {
-                generateStatus.textContent = 'Canceled';
-            } else {
-                console.error(err);
-                generateStatus.textContent = 'Error generating';
-            }
+            console.error(err);
+            generateStatus.textContent = 'Error generating';
         } finally {
             spinnerEl.hidden = true;
-            cancelGenBtn.hidden = true;
             generateBtn.disabled = false;
             setTimeout(() => (generateStatus.textContent = ''), 1500);
-            abortGen = null;
         }
     });
 
-    cancelGenBtn.addEventListener('click', () => {
-        if (abortGen) abortGen();
-    });
-
-    function simulateGeneration(prompt, { signal }) {
-        // This simulates a streaming/long-running generation and supports cancel
-        return new Promise((resolve, reject) => {
-            const duration = 2500 + Math.random() * 2000;
-            const timeout = setTimeout(() => {
-                resolve(`Suggested answer for: ${prompt}`);
-            }, duration);
-
-            const onAbort = () => {
-                clearTimeout(timeout);
-                reject(new DOMException('Aborted', 'AbortError'));
-            };
-
-            if (signal.aborted) return onAbort();
-            signal.addEventListener('abort', onAbort, { once: true });
-        });
-    }
-
-    // SCRUM-5: Non-blocking generation
-    let abortGen = null;
-
-    generateBtn.addEventListener('click', async () => {
-        if (!questionInput.value.trim()) {
-            questionInput.focus();
-            return;
-        }
-        // Setup UI state
-        spinnerEl.hidden = false;
-        cancelGenBtn.hidden = false;
-        generateBtn.disabled = true;
-        generateStatus.textContent = 'Generating...';
-
-        // Simulated async generation with AbortController
-        const controller = new AbortController();
-        abortGen = () => controller.abort();
-
-        try {
-            const answer = await simulateGeneration(questionInput.value.trim(), { signal: controller.signal });
-            if (!controller.signal.aborted) {
-                answerInput.value = answer;
-                generateStatus.textContent = 'Done';
-            }
-        } catch (err) {
-            if (controller.signal.aborted) {
-                generateStatus.textContent = 'Canceled';
-            } else {
-                console.error(err);
-                generateStatus.textContent = 'Error generating';
-            }
-        } finally {
-            spinnerEl.hidden = true;
-            cancelGenBtn.hidden = true;
-            generateBtn.disabled = false;
-            setTimeout(() => (generateStatus.textContent = ''), 1500);
-            abortGen = null;
-        }
-    });
-
-    cancelGenBtn.addEventListener('click', () => {
-        if (abortGen) abortGen();
-    });
-
-    function simulateGeneration(prompt, { signal }) {
-        // This simulates a streaming/long-running generation and supports cancel
-        return new Promise((resolve, reject) => {
-            const duration = 2500 + Math.random() * 2000;
-            const timeout = setTimeout(() => {
-                resolve(`Suggested answer for: ${prompt}`);
-            }, duration);
-
-            const onAbort = () => {
-                clearTimeout(timeout);
-                reject(new DOMException('Aborted', 'AbortError'));
-            };
-
-            if (signal.aborted) return onAbort();
-            signal.addEventListener('abort', onAbort, { once: true });
-        });
-    }
 
     // Overlay restore defaults button
     const restoreShortcutsBtn = document.getElementById('restoreShortcutsBtn');
