@@ -46,14 +46,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Save auto-capture setting
     autoCapture.addEventListener('change', async () => {
         const currentSettings = await window.electronAPI.getSettings();
-        await window.electronAPI.updateSettings({
+        const newSettings = {
             ...currentSettings,
             ai: {
                 ...currentSettings.ai,
-                autoCapture: autoCapture.checked
+                autoCapture: autoCapture.checked,
+                onboardingSeen: {
+                    ...currentSettings.ai?.onboardingSeen,
+                    autoCapture: currentSettings.ai?.onboardingSeen?.autoCapture || false
+                }
             }
-        });
+        };
+        await window.electronAPI.updateSettings(newSettings);
+
+        // Show onboarding tooltip once when enabling
+        if (autoCapture.checked && !newSettings.ai.onboardingSeen.autoCapture) {
+            showOnboardingTooltip();
+            const updated = await window.electronAPI.getSettings();
+            await window.electronAPI.updateSettings({
+                ...updated,
+                ai: {
+                    ...updated.ai,
+                    onboardingSeen: { ...(updated.ai?.onboardingSeen || {}), autoCapture: true }
+                }
+            });
+        }
     });
+
+    function showOnboardingTooltip() {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'onboarding-tooltip';
+        tooltip.setAttribute('role', 'dialog');
+        tooltip.setAttribute('aria-live', 'polite');
+        tooltip.innerHTML = `
+            <div class="tooltip-content">
+                <button class="tooltip-close" aria-label="Close">×</button>
+                <h4>Auto-capture enabled</h4>
+                <p>When you add a question, we’ll briefly hide the panel and capture a screenshot to help AI generate better answers. You can disable this anytime in Settings → AI.</p>
+                <div class="tooltip-actions">
+                    <button class="secondary" id="tooltipDismiss">Got it</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(tooltip);
+        const close = () => { tooltip.remove(); };
+        tooltip.querySelector('.tooltip-close')?.addEventListener('click', close);
+        tooltip.querySelector('#tooltipDismiss')?.addEventListener('click', close);
+        // Keyboard support
+        tooltip.tabIndex = -1;
+        tooltip.focus();
+        tooltip.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    }
 
     // Load existing questions and settings
     await Promise.all([
@@ -264,7 +307,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentQuestions = await window.electronAPI.getQuestions();
         questionList.innerHTML = '';
         if (currentQuestions.length === 0) {
-            questionList.innerHTML = '<p style="color: #666; text-align: center;">No questions for this app yet.</p>';
+            questionList.innerHTML = `
+                <div class="empty-state" role="region" aria-label="No questions">
+                    <h3>No questions yet</h3>
+                    <p>Try one of these to get started:</p>
+                    <ul>
+                        <li>What are the key shortcuts for this app?</li>
+                        <li>How do I perform <em>common task</em>?</li>
+                        <li>Where can I find settings for <em>feature</em>?</li>
+                    </ul>
+                    <div class="empty-actions">
+                        <button id="emptyAddBtn" class="secondary">Add a question</button>
+                        <button id="emptySettingsBtn" class="secondary">Open Settings</button>
+                    </div>
+                    <p class="hint">Tip: Press <strong>Shift+Space</strong> to toggle the panel</p>
+                </div>
+            `;
+            // Wire up quick actions
+            const emptyAddBtn = document.getElementById('emptyAddBtn');
+            const emptySettingsBtn = document.getElementById('emptySettingsBtn');
+            if (emptyAddBtn) emptyAddBtn.addEventListener('click', () => questionInput.focus());
+            if (emptySettingsBtn) {
+                emptySettingsBtn.addEventListener('click', () => {
+                    if (!settingsModal) settingsModal = new SettingsModal();
+                    settingsModal.show();
+                });
+            }
         } else {
             currentQuestions.forEach((qa, index) => {
                 const li = document.createElement('li');

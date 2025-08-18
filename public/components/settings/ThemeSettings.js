@@ -36,6 +36,20 @@ class ThemeSettings {
                     </div>
 
                     <div class="setting-group">
+                        <label>Selected Theme Preview</label>
+                        <div id="selectedThemePreview" class="theme-preview">
+                            <div class="preview-header">
+                                <span class="preview-title">Preview</span>
+                                <button class="preview-button">Action</button>
+                            </div>
+                            <div class="preview-content">
+                                <p>Sample text</p>
+                                <div class="preview-input"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
                         <button id="createThemeBtn" class="action-button">
                             <span class="icon">+</span> Create New Theme
                         </button>
@@ -150,7 +164,9 @@ class ThemeSettings {
         themeSelect.addEventListener('change', async (e) => {
             const selectedTheme = e.target.value;
             await this.themeService.applyTheme(selectedTheme);
-            
+            // Update inline selected theme preview
+            this.updateSelectedThemePreview(this.themeService.getTheme(selectedTheme));
+
             // Show/hide delete button for custom themes
             const isCustomTheme = this.themeService.themes.customThemes[selectedTheme];
             deleteThemeBtn.style.display = isCustomTheme ? 'inline-block' : 'none';
@@ -318,13 +334,40 @@ class ThemeSettings {
         if (themeSelect) {
             themeSelect.value = settings.theme.mode || 'dark';
             await this.themeService.applyTheme(themeSelect.value);
-            
+            // Initialize inline selected theme preview
+            this.updateSelectedThemePreview(this.themeService.getTheme(themeSelect.value));
+
             // Show/hide delete button for custom themes
             const deleteThemeBtn = this.element.querySelector('#deleteThemeBtn');
             const isCustomTheme = this.themeService.themes.customThemes[themeSelect.value];
             if (deleteThemeBtn) {
                 deleteThemeBtn.style.display = isCustomTheme ? 'inline-block' : 'none';
             }
+        }
+    }
+
+    updateSelectedThemePreview(theme) {
+        if (!theme) return;
+        const preview = this.element.querySelector('#selectedThemePreview');
+        if (!preview) return;
+        preview.style.backgroundColor = theme.backgroundColor;
+        preview.style.color = theme.textColor;
+        preview.style.border = `1px solid ${theme.borderColor}`;
+        const previewButton = preview.querySelector('.preview-button');
+        if (previewButton) {
+            previewButton.style.backgroundColor = theme.accentColor;
+            previewButton.style.color = theme.backgroundColor;
+            previewButton.style.border = `1px solid ${theme.borderColor}`;
+        }
+        const previewInput = preview.querySelector('.preview-input');
+        if (previewInput) {
+            previewInput.style.backgroundColor = theme.inputBackgroundColor;
+            previewInput.style.borderColor = theme.borderColor;
+        }
+        const previewHeader = preview.querySelector('.preview-header');
+        if (previewHeader) {
+            previewHeader.style.backgroundColor = theme.secondaryBackgroundColor;
+            previewHeader.style.borderBottom = `1px solid ${theme.borderColor}`;
         }
     }
 }
