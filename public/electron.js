@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, dialog, screen, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, dialog, screen, desktopCapturer, nativeImage } = require('electron');
 const path = require('path');
 const url = require('url');
 const isDev = require('electron-is-dev');
@@ -106,6 +106,42 @@ async function captureLastUsedAppScreen() {
     }
 }
 
+// Consent dialog for screenshots
+async function requestScreenshotConsent() {
+    const result = await dialog.showMessageBox(mainWindow, {
+        type: 'question',
+        buttons: ['Allow', 'Deny'],
+        defaultId: 0,
+        cancelId: 1,
+        title: 'Allow screenshot capture?',
+        message: 'Do you consent to capture a screenshot of your current screen to send as context to the vision model?',
+        detail: 'The image will be processed locally and sent to your configured vision model (e.g., MiniCPM-V) via Ollama. Sensitive content may be visible in the capture.'
+    });
+    return result.response === 0;
+}
+
+function isVisionModel(modelName = '') {
+    const n = String(modelName || '').toLowerCase();
+    return n.includes('llava') || n.includes('bakllava') || n.includes('minicpm-v') || n.includes('vision');
+}
+
+// Preprocess image: resize/compress to max 1024x1024 and return base64 without prefix
+function preprocessImageBase64(base64Str, maxSize = 1024, quality = 0.8) {
+    try {
+        const img = nativeImage.createFromDataURL(`data:image/png;base64,${base64Str}`);
+        const size = img.getSize();
+        const scale = Math.min(1, maxSize / Math.max(size.width, size.height));
+        const resized = scale < 1 ? img.resize({ width: Math.round(size.width * scale), height: Math.round(size.height * scale), quality: 'best' }) : img;
+        // compress to JPEG to reduce payload size
+        const jpeg = resized.toJPEG(Math.round(quality * 100));
+        return Buffer.from(jpeg).toString('base64');
+    } catch (e) {
+        log.error('Failed to preprocess image', e);
+        return base64Str;
+    }
+}
+
+
 // Ollama API handlers
 async function ollamaIsRunning() {
     try {
@@ -152,7 +188,7 @@ async function ollamaGenerateAnswer(model, prompt, imageData = null) {
             }
         };
 
-        if (imageData && model.toLowerCase().includes('llava')) {
+        if (imageData && isVisionModel(model)) {
             body.images = [imageData];
         }
 
@@ -389,10 +425,10 @@ ipcMain.handle('get-questions', () => {
 });
 
 ipcMain.handle('add-question', (event, question, answer) => {
-    qaList.push({ 
-        id: Date.now(), 
-        question, 
-        answer, 
+    qaList.push({
+        id: Date.now(),
+        question,
+        answer,
         app: settings.lastUsedApp,
         isAIGenerated: answer && settings.ai?.enabled,
         referencesContext: false
@@ -404,9 +440,9 @@ ipcMain.handle('add-question', (event, question, answer) => {
 ipcMain.handle('update-question', (event, id, question, answer, isAIGenerated = false) => {
     const index = qaList.findIndex(q => q.id === id);
     if (index !== -1) {
-        qaList[index] = { 
-            ...qaList[index], 
-            question, 
+        qaList[index] = {
+            ...qaList[index],
+            question,
             answer,
             isAIGenerated,
             referencesContext: qaList[index].referencesContext
@@ -437,9 +473,20 @@ ipcMain.handle('get-last-used-app', () => {
     return settings.lastUsedApp;
 });
 
+
+// Secure screenshot with consent and preprocessing
+ipcMain.handle('capture-screen-with-consent', async () => {
+    const allowed = await requestScreenshotConsent();
+    if (!allowed) return { allowed: false, image: null };
+    const raw = await captureLastUsedAppScreen();
+    if (!raw) return { allowed: true, image: null };
+    const processed = preprocessImageBase64(raw, 1024, 0.8);
+    return { allowed: true, image: processed };
+});
+
 ipcMain.handle('get-contextual-questions', (event, currentQuestion) => {
     const appQuestions = qaList.filter(qa => qa.app === settings.lastUsedApp);
-    
+
     if (!settings.ai?.contextMemory?.enabled || appQuestions.length === 0) {
         return [];
     }
@@ -581,5 +628,5 @@ ipcMain.handle('show-window', () => {
 // Ollama IPC handlers
 ipcMain.handle('ollama-is-running', ollamaIsRunning);
 ipcMain.handle('ollama-list-models', ollamaListModels);
-ipcMain.handle('ollama-generate-answer', (event, model, prompt, imageData) => 
+ipcMain.handle('ollama-generate-answer', (event, model, prompt, imageData) =>
     ollamaGenerateAnswer(model, prompt, imageData));
