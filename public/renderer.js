@@ -85,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     });
-<<<<<<< HEAD
     // Overlay restore defaults button
     const restoreShortcutsBtn = document.getElementById('restoreShortcutsBtn');
     if (restoreShortcutsBtn) {
@@ -97,13 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 exportData: 'Ctrl+Shift+E',
                 importData: 'Ctrl+Shift+I'
             };
-            const currentSettings = await window.electronAPI.getSettings();
             await window.electronAPI.updateSettings({ shortcuts: defaultShortcuts });
             hideShortcutsOverlay();
         });
     }
 
-=======
     // SCRUM-5: Non-blocking generation
     let abortGen = null;
 
@@ -165,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
             signal.addEventListener('abort', onAbort, { once: true });
         });
     }
->>>>>>> d043cfc (SCRUM-5: Non-blocking AI generation UI with spinner/cancel; SCRUM-10: Question action tooltips + delete confirm; SCRUM-15: Accessibility contrast and focus outlines)
 
     questionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
