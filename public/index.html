@@ -137,6 +137,50 @@
             justify-content: center;
             z-index: 1000;
         }
+
+        /* SCRUM-5: Non-blocking AI generation UI */
+        .answer-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .secondary {
+            background-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+        }
+        .secondary:hover {
+            border-color: #ffa500;
+            color: #ffa500;
+        }
+        .status-text {
+            font-size: 14px;
+            color: #ffa500;
+        }
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #ffa500;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* SCRUM-15: Accessibility focus and contrast */
+        button:focus-visible,
+        .settings-button:focus-visible,
+        .edit-btn:focus-visible,
+        .delete-btn:focus-visible,
+        input:focus-visible,
+        textarea:focus-visible {
+            outline: 3px solid #ffa500;
+            outline-offset: 2px;
+        }
     </style>
         <style>
             :root { --accent: #ffa500; --muted: rgba(255,255,255,0.7); }
@@ -170,6 +214,7 @@
 
 </head>
 <body>
+
     <div class="container" role="main">
         <button class="settings-button" id="settingsBtn" aria-label="Open settings" aria-haspopup="dialog" aria-controls="settingsModal">⚙️ Settings</button>
         <h1>QA-Panel</h1>
@@ -180,6 +225,24 @@
             <input type="text" id="questionInput" placeholder="Enter your question" required>
             <label for="answerInput">Answer</label>
             <textarea id="answerInput" placeholder="Enter the answer (optional)" rows="3"></textarea>
+            <div class="answer-actions">
+                <button type="button" id="generateBtn" title="Generate an answer using AI (non-blocking)" aria-describedby="generateStatus">✨ Generate Answer</button>
+                <button type="button" id="cancelGenBtn" class="secondary" hidden>Cancel</button>
+                <span id="spinner" class="spinner" aria-hidden="true" hidden></span>
+                <span id="generateStatus" role="status" aria-live="polite" class="status-text"></span>
+            </div>
+
+    <div class="container" role="main">
+        <button class="settings-button" id="settingsBtn" aria-label="Open settings" aria-haspopup="dialog" aria-controls="settingsModal">⚙️ Settings</button>
+        <h1>QA-Panel</h1>
+        <div id="notification" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div id="lastUsedApp" role="status" aria-live="polite">Last Used App: Loading...</div>
+        <form id="questionForm" aria-labelledby="formHeading">
+            <label id="formHeading" for="questionInput">Question</label>
+            <input type="text" id="questionInput" placeholder="Enter your question" required>
+            <label for="answerInput">Answer</label>
+            <textarea id="answerInput" placeholder="Enter the answer (optional)" rows="3"></textarea>
+
             <button type="submit" id="submitBtn">Add Question</button>
         </form>
         <h2 id="qaHeading">Questions and Answers:</h2>
