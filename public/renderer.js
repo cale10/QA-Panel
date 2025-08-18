@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     const questionForm = document.getElementById('questionForm');
     const questionInput = document.getElementById('questionInput');
     const answerInput = document.getElementById('answerInput');
@@ -6,134 +6,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const submitBtn = document.getElementById('submitBtn');
     const lastUsedAppDiv = document.getElementById('lastUsedApp');
     const settingsBtn = document.getElementById('settingsBtn');
-    const autoCapture = document.getElementById('autoCapture');
-    const capturePreview = document.querySelector('.capture-preview');
-    const capturePreviewImg = document.getElementById('capturePreview');
-    const captureCloseBtn = document.querySelector('.capture-preview .close-btn');
+    const notification = document.getElementById('notification');
 
-    // Initialize theme service
-    let themeService;
-    try {
-        themeService = new ThemeService();
-        await themeService.waitForInit();
-    } catch (error) {
-        console.error('Error initializing theme service:', error);
-        // Use default theme if service fails
-        document.documentElement.style.setProperty('--background-color', '#202124');
-        document.documentElement.style.setProperty('--secondary-background-color', '#2d2e31');
-        document.documentElement.style.setProperty('--accent-color', '#ffa500');
-        document.documentElement.style.setProperty('--text-color', '#ffffff');
-        document.documentElement.style.setProperty('--border-color', '#444444');
-        document.documentElement.style.setProperty('--input-background-color', '#1e1e1e');
-        document.documentElement.style.setProperty('--hover-background-color', 'rgba(255, 255, 255, 0.03)');
-        document.documentElement.style.setProperty('--shadow-color', 'rgba(0, 0, 0, 0.2)');
-    }
-
+    const generateBtn = document.getElementById('generateBtn');
+    const cancelGenBtn = document.getElementById('cancelGenBtn');
+    const spinnerEl = document.getElementById('spinner');
+    const generateStatus = document.getElementById('generateStatus');
     let editingId = null;
     let currentQuestions = [];
     let isEditing = false;
     let settingsModal = null;
-    let ollamaService = new OllamaService();
-    let streamingAnswer = '';
-    let streamingInterval = null;
-    let lastCapturedImage = null;
-    let typingSpeed = 1; // Characters per frame
+    let lastFocusedBeforeSettings = null;
 
-    // Load auto-capture setting
-    const settings = await window.electronAPI.getSettings();
-    autoCapture.checked = settings.ai?.autoCapture || false;
-
-    // Save auto-capture setting
-    autoCapture.addEventListener('change', async () => {
-        const currentSettings = await window.electronAPI.getSettings();
-        const newSettings = {
-            ...currentSettings,
-            ai: {
-                ...currentSettings.ai,
-                autoCapture: autoCapture.checked,
-                onboardingSeen: {
-                    ...currentSettings.ai?.onboardingSeen,
-                    autoCapture: currentSettings.ai?.onboardingSeen?.autoCapture || false
-                }
-            }
-        };
-        await window.electronAPI.updateSettings(newSettings);
-
-        // Show onboarding tooltip once when enabling
-        if (autoCapture.checked && !newSettings.ai.onboardingSeen.autoCapture) {
-            showOnboardingTooltip();
-            const updated = await window.electronAPI.getSettings();
-            await window.electronAPI.updateSettings({
-                ...updated,
-                ai: {
-                    ...updated.ai,
-                    onboardingSeen: { ...(updated.ai?.onboardingSeen || {}), autoCapture: true }
-                }
-            });
-        }
-    });
-
-    function showOnboardingTooltip() {
-        const tooltip = document.createElement('div');
-        tooltip.className = 'onboarding-tooltip';
-        tooltip.setAttribute('role', 'dialog');
-        tooltip.setAttribute('aria-live', 'polite');
-        tooltip.innerHTML = `
-            <div class="tooltip-content">
-                <button class="tooltip-close" aria-label="Close">×</button>
-                <h4>Auto-capture enabled</h4>
-                <p>When you add a question, we’ll briefly hide the panel and capture a screenshot to help AI generate better answers. You can disable this anytime in Settings → AI.</p>
-                <div class="tooltip-actions">
-                    <button class="secondary" id="tooltipDismiss">Got it</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(tooltip);
-        const close = () => { tooltip.remove(); };
-        tooltip.querySelector('.tooltip-close')?.addEventListener('click', close);
-        tooltip.querySelector('#tooltipDismiss')?.addEventListener('click', close);
-        // Keyboard support
-        tooltip.tabIndex = -1;
-        tooltip.focus();
-        tooltip.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-    }
+    // Shortcuts overlay elements
+    const shortcutsOverlay = document.getElementById('shortcutsOverlay');
+    const closeShortcutsBtn = document.getElementById('closeShortcutsBtn');
 
     // Load existing questions and settings
-    await Promise.all([
-        loadQuestions(),
-        loadSettings(),
-        updateLastUsedApp()
-    ]);
-
-    // Screen capture function
-    async function captureScreen() {
-        try {
-            // Hide the window
-            await window.electronAPI.hideWindow();
-
-            // Wait a moment for the window to hide
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Capture the screen
-            const imageData = await window.electronAPI.captureScreen();
-            if (imageData) {
-                lastCapturedImage = imageData;
-                capturePreviewImg.src = `data:image/png;base64,${imageData}`;
-                capturePreview.style.display = 'block';
-            }
-
-            // Show the window again
-            await window.electronAPI.showWindow();
-        } catch (error) {
-            console.error('Error capturing screen:', error);
-            alert('Failed to capture screen: ' + error.message);
-        }
-    }
-
-    captureCloseBtn.addEventListener('click', () => {
-        capturePreview.style.display = 'none';
-        lastCapturedImage = null;
-    });
+    loadQuestions();
+    loadSettings();
+    updateLastUsedApp();
 
     // Listen for last used app updates
     window.electronAPI.onUpdateLastUsedApp((event, lastUsedApp) => {
@@ -141,55 +33,142 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadQuestions();
     });
 
-    // Listen for streaming responses
-    window.electronAPI.onStreamResponse((event, chunk) => {
-        streamingAnswer += chunk;
-        if (answerInput.value === '') {
-            startTypingAnimation();
+    // Shortcuts overlay events
+    function showShortcutsOverlay() {
+        if (shortcutsOverlay) {
+            shortcutsOverlay.style.display = 'flex';
+            const modal = shortcutsOverlay.querySelector('.shortcuts-modal');
+            if (modal) modal.focus();
+        }
+    }
+
+    function hideShortcutsOverlay() {
+        if (shortcutsOverlay) {
+            shortcutsOverlay.style.display = 'none';
+        }
+    }
+
+    if (closeShortcutsBtn) {
+        closeShortcutsBtn.addEventListener('click', () => hideShortcutsOverlay());
+    }
+
+    // Handle tray "Show Shortcuts" action
+    if (window.electronAPI.onShowShortcutsOverlay) {
+        window.electronAPI.onShowShortcutsOverlay(() => {
+            showShortcutsOverlay();
+        });
+    }
+
+    // Allow Esc to close the overlay
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && shortcutsOverlay && shortcutsOverlay.style.display !== 'none') {
+            hideShortcutsOverlay();
         }
     });
 
-    function startTypingAnimation() {
-        let displayedChars = 0;
-        if (streamingInterval) {
-            cancelAnimationFrame(streamingInterval);
-            streamingInterval = null;
-        }
-
-        // Add typing class for animation
-        answerInput.classList.add('typing');
-
-        const animate = () => {
-            if (displayedChars < streamingAnswer.length) {
-                // Type multiple characters per frame for smoother animation
-                displayedChars = Math.min(displayedChars + typingSpeed, streamingAnswer.length);
-                answerInput.value = streamingAnswer.substring(0, displayedChars);
-                answerInput.scrollTop = answerInput.scrollHeight;
-                streamingInterval = requestAnimationFrame(animate);
-            } else {
-                answerInput.classList.remove('typing');
-                cancelAnimationFrame(streamingInterval);
-                streamingInterval = null;
-                streamingAnswer = '';
-            }
-        };
-
-        streamingInterval = requestAnimationFrame(animate);
-    }
-
+    // Settings button opens modal and stores focus return target
     settingsBtn.addEventListener('click', () => {
+        lastFocusedBeforeSettings = document.activeElement || settingsBtn;
         if (!settingsModal) {
             settingsModal = new SettingsModal();
         }
         settingsModal.show();
+        // Announce opening
+        announce('Settings opened');
+        // When modal closes, return focus
+        const originalHide = settingsModal.hide.bind(settingsModal);
+        settingsModal.hide = () => {
+            originalHide();
+            if (lastFocusedBeforeSettings && typeof lastFocusedBeforeSettings.focus === 'function') {
+                lastFocusedBeforeSettings.focus();
+                announce('Returned focus to previous element');
+            }
+        };
     });
+
+    // SCRUM-5: Non-blocking generation
+    let abortGen = null;
+
+    generateBtn.addEventListener('click', async () => {
+        if (!questionInput.value.trim()) {
+            questionInput.focus();
+            return;
+        }
+        // Setup UI state
+        spinnerEl.hidden = false;
+        cancelGenBtn.hidden = false;
+        generateBtn.disabled = true;
+        generateStatus.textContent = 'Generating...';
+
+        // Simulated async generation with AbortController
+        const controller = new AbortController();
+        abortGen = () => controller.abort();
+
+        try {
+            const answer = await simulateGeneration(questionInput.value.trim(), { signal: controller.signal });
+            if (!controller.signal.aborted) {
+                answerInput.value = answer;
+                generateStatus.textContent = 'Done';
+            }
+        } catch (err) {
+            if (controller.signal.aborted) {
+                generateStatus.textContent = 'Canceled';
+            } else {
+                console.error(err);
+                generateStatus.textContent = 'Error generating';
+            }
+        } finally {
+            spinnerEl.hidden = true;
+            cancelGenBtn.hidden = true;
+            generateBtn.disabled = false;
+            setTimeout(() => (generateStatus.textContent = ''), 1500);
+            abortGen = null;
+        }
+    });
+
+    cancelGenBtn.addEventListener('click', () => {
+        if (abortGen) abortGen();
+    });
+
+    function simulateGeneration(prompt, { signal }) {
+        // This simulates a streaming/long-running generation and supports cancel
+        return new Promise((resolve, reject) => {
+            const duration = 2500 + Math.random() * 2000;
+            const timeout = setTimeout(() => {
+                resolve(`Suggested answer for: ${prompt}`);
+            }, duration);
+
+            const onAbort = () => {
+                clearTimeout(timeout);
+                reject(new DOMException('Aborted', 'AbortError'));
+            };
+
+            if (signal.aborted) return onAbort();
+            signal.addEventListener('abort', onAbort, { once: true });
+        });
+    }
+
+    // Overlay restore defaults button
+    const restoreShortcutsBtn = document.getElementById('restoreShortcutsBtn');
+    if (restoreShortcutsBtn) {
+        restoreShortcutsBtn.addEventListener('click', async () => {
+            // Reset global shortcuts to defaults via settings
+            const defaultShortcuts = {
+                toggleApp: 'Shift+Space',
+                newQuestion: 'Shift+N',
+                exportData: 'Ctrl+Shift+E',
+                importData: 'Ctrl+Shift+I'
+            };
+            const currentSettings = await window.electronAPI.getSettings();
+            await window.electronAPI.updateSettings({ shortcuts: defaultShortcuts });
+            hideShortcutsOverlay();
+        });
+    }
+
+
 
     questionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const settings = await window.electronAPI.getSettings();
-        if (settings.ai?.autoCapture) {
-            await captureScreen();
-        }
         await addOrUpdateQuestion();
     });
 
@@ -217,77 +196,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         isEditing = false;
     });
 
+    function announce(message) {
+        if (notification) {
+            notification.textContent = message;
+        }
+    }
+
     async function addOrUpdateQuestion() {
         const question = questionInput.value.trim();
         const answer = answerInput.value.trim();
 
-        if (question) {
-            // Check if we're at the 5 question limit
-            if (!editingId && currentQuestions.length >= 5) {
-                alert('Maximum limit of 5 questions reached. Please delete some questions to add more.');
-                return;
-            }
+        if (!question) {
+            announce('Please enter a question.');
+            return;
+        }
+
+        try {
             if (editingId) {
                 await window.electronAPI.updateQuestion(editingId, question, answer);
                 editingId = null;
                 submitBtn.textContent = 'Add Question';
+                announce('Question updated');
             } else {
-                const settings = await window.electronAPI.getSettings();
-                let finalAnswer = answer;
-
-                // Auto-generate answer if enabled and no answer provided
-                if (settings.ai?.enabled && settings.ai?.autoAnswer && !answer) {
-                    try {
-                        showLoading(submitBtn, 'Generating answer...');
-                        const contextQuestions = await window.electronAPI.getContextualQuestions(question);
-
-                        // Get the appropriate template
-                        let prompt;
-                        switch (settings.ai.promptTemplate.mode) {
-                            case 'simple':
-                                prompt = settings.ai.promptTemplate.templates.simple;
-                                break;
-                            case 'advanced':
-                                prompt = `${settings.ai.promptTemplate.systemPrompt}\n\n`;
-                                if (settings.ai.promptTemplate.customInstructions.length > 0) {
-                                    prompt += `Instructions:\n${settings.ai.promptTemplate.customInstructions.join('\n')}\n\n`;
-                                }
-                                prompt += `Question: ${question}`;
-                                break;
-                            default: // 'basic'
-                                prompt = ollamaService.createPrompt(
-                                    settings.lastUsedApp,
-                                    question,
-                                    contextQuestions,
-                                    true // Always use context in basic mode
-                                );
-                        }
-
-                        // Check if Ollama is running
-                        const isOllamaRunning = await ollamaService.isOllamaRunning();
-                        if (!isOllamaRunning) {
-                            throw new Error('Ollama is not running. Please start Ollama and try again.');
-                        }
-
-                        // Use vision model if there's a captured image
-                        const model = lastCapturedImage ? settings.ai.visionModel : settings.ai.model;
-                        finalAnswer = await ollamaService.generateAnswer(model, prompt, lastCapturedImage);
-
-                        // Clear the captured image after using it
-                        if (lastCapturedImage) {
-                            lastCapturedImage = null;
-                            capturePreview.style.display = 'none';
-                        }
-                    } catch (error) {
-                        console.error('Error generating AI answer:', error);
-                        alert(`Error generating answer: ${error.message}`);
-                        finalAnswer = '';
-                    } finally {
-                        hideLoading(submitBtn, 'Add Question');
-                    }
-                }
-
-                await window.electronAPI.addQuestion(question, finalAnswer);
+                await window.electronAPI.addQuestion(question, answer);
+                announce('Question added');
             }
             questionInput.value = '';
             answerInput.value = '';
@@ -300,170 +232,117 @@ document.addEventListener('DOMContentLoaded', async () => {
                     lastQuestion.focus();
                 }
             }
+        } catch (err) {
+            console.error(err);
+            announce('An error occurred while saving the question.');
         }
     }
 
     async function loadQuestions() {
-        currentQuestions = await window.electronAPI.getQuestions();
-        questionList.innerHTML = '';
-        if (currentQuestions.length === 0) {
-            questionList.innerHTML = `
-                <div class="empty-state" role="region" aria-label="No questions">
-                    <h3>No questions yet</h3>
-                    <p>Try one of these to get started:</p>
-                    <ul>
-                        <li>What are the key shortcuts for this app?</li>
-                        <li>How do I perform <em>common task</em>?</li>
-                        <li>Where can I find settings for <em>feature</em>?</li>
-                    </ul>
-                    <div class="empty-actions">
-                        <button id="emptyAddBtn" class="secondary">Add a question</button>
-                        <button id="emptySettingsBtn" class="secondary">Open Settings</button>
-                    </div>
-                    <p class="hint">Tip: Press <strong>Shift+Space</strong> to toggle the panel</p>
-                </div>
-            `;
-            // Wire up quick actions
-            const emptyAddBtn = document.getElementById('emptyAddBtn');
-            const emptySettingsBtn = document.getElementById('emptySettingsBtn');
-            if (emptyAddBtn) emptyAddBtn.addEventListener('click', () => questionInput.focus());
-            if (emptySettingsBtn) {
-                emptySettingsBtn.addEventListener('click', () => {
-                    if (!settingsModal) settingsModal = new SettingsModal();
-                    settingsModal.show();
+        try {
+            currentQuestions = await window.electronAPI.getQuestions();
+            questionList.innerHTML = '';
+            if (currentQuestions.length === 0) {
+                const p = document.createElement('p');
+                p.textContent = 'No questions for this app yet.';
+                p.setAttribute('role', 'note');
+                questionList.appendChild(p);
+            } else {
+                currentQuestions.forEach((qa, index) => {
+                    const li = document.createElement('li');
+                    li.setAttribute('role', 'listitem');
+                    li.setAttribute('tabindex', '0');
+                    li.setAttribute('aria-label', `Question ${index + 1}: ${qa.question}`);
+
+                    const formatText = (text) => {
+                        if (!text) return '';
+                        // Basic fenced code block support: ```code```
+                        const fence = /```([\s\S]*?)```/g;
+                        let html = text.replace(fence, (m, code) => {
+                            const safe = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            return `<pre><code>${safe}</code></pre>`;
+                        });
+                        // Inline code: `code`
+                        html = html.replace(/`([^`]+)`/g, (m, code) => `<code>${code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code>`);
+                        // Escape remaining angle brackets to avoid injection, except allowed tags
+                        html = html.replace(/<(?!\/?(pre|code)\b)/g, '&lt;');
+                        return html;
+                    };
+
+                    const questionHTML = formatText(qa.question);
+                    const answerHTML = formatText(qa.answer || '');
+
+                    li.innerHTML = `
+                        <span class="question-number" aria-hidden="true">${index + 1}</span>
+                        <div class="qa-question">
+                            <span class="qa-label" aria-hidden="true">Q</span>
+                            <div class="qa-text">${questionHTML}</div>
+                        </div>
+                        <div class="qa-answer">
+                            <span class="qa-label" aria-hidden="true">A</span>
+                            <div class="qa-text">${answerHTML || '<em>Not answered yet</em>'}</div>
+                        </div>
+                        <div class="question-actions">
+                            <button class="edit-btn" data-id="${qa.id}" title="Edit this question (Shortcut: q)" aria-label="Edit question ${index + 1}">Edit</button>
+                            <button class="delete-btn" data-id="${qa.id}" title="Delete this question (Shortcut: d)" aria-label="Delete question ${index + 1}">Delete</button>
+                        </div>
+                    `;
+                    li.dataset.id = qa.id;
+                    questionList.appendChild(li);
+                });
+
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => editQuestion(e.target.dataset.id));
+                });
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const id = e.target.dataset.id;
+                        const qa = currentQuestions.find(q => q.id === parseInt(id));
+                        const text = qa ? `Delete question: "${qa.question}"?` : 'Delete this question?';
+                        if (confirm(text)) {
+                            try {
+                                await deleteQuestion(id);
+                                announce('Question deleted');
+                            } catch (err) {
+                                console.error(err);
+                                announce('Failed to delete question');
+                            }
+                        }
+                    });
                 });
             }
-        } else {
-            currentQuestions.forEach((qa, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <span class="question-number">${index + 1}</span>
-                    <strong>Q: ${qa.question}</strong>
-                    <p>A: ${qa.answer || 'Not answered yet'}</p>
-                    <div class="question-actions">
-                        ${!qa.answer ? `<button class="ai-answer-btn" data-id="${qa.id}">🤖 Generate Answer</button>` : ''}
-                        <button class="edit-btn" data-id="${qa.id}">Edit</button>
-                        <button class="delete-btn" data-id="${qa.id}">Delete</button>
-                    </div>
-                    ${qa.isAIGenerated ? '<span class="ai-generated-badge">🤖 AI Generated</span>' : ''}
-                    ${qa.referencesContext ? '<span class="reference-badge">📚 Uses Memory</span>' : ''}
-                `;
-                li.setAttribute('tabindex', '0');
-                li.dataset.id = qa.id;
-                questionList.appendChild(li);
-            });
-
-            // Add event listeners for buttons
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => editQuestion(e.target.dataset.id));
-            });
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => deleteQuestion(e.target.dataset.id));
-            });
-            document.querySelectorAll('.ai-answer-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => generateAnswer(e.target.dataset.id));
-            });
+        } catch (err) {
+            console.error(err);
+            announce('Failed to load questions');
         }
-    }
-
-    async function generateAnswer(id) {
-        const qa = currentQuestions.find(q => q.id === parseInt(id));
-        if (!qa) return;
-
-        const button = document.querySelector(`.ai-answer-btn[data-id="${id}"]`);
-        if (!button) return;
-
-        try {
-            showLoading(button, 'Generating...');
-            const settings = await window.electronAPI.getSettings();
-            if (!settings.ai?.enabled) {
-                throw new Error('AI features are not enabled');
-            }
-
-            // Check if Ollama is running
-            const isOllamaRunning = await ollamaService.isOllamaRunning();
-            if (!isOllamaRunning) {
-                throw new Error('Ollama is not running. Please start Ollama and try again.');
-            }
-
-            const contextQuestions = await window.electronAPI.getContextualQuestions(qa.question);
-
-            // Get the appropriate template
-            let prompt;
-            switch (settings.ai.promptTemplate.mode) {
-                case 'simple':
-                    prompt = settings.ai.promptTemplate.templates.simple;
-                    break;
-                case 'advanced':
-                    prompt = `${settings.ai.promptTemplate.systemPrompt}\n\n`;
-                    if (settings.ai.promptTemplate.customInstructions.length > 0) {
-                        prompt += `Instructions:\n${settings.ai.promptTemplate.customInstructions.join('\n')}\n\n`;
-                    }
-                    prompt += `Question: ${qa.question}`;
-                    break;
-                default: // 'basic'
-                    prompt = ollamaService.createPrompt(
-                        settings.lastUsedApp,
-                        qa.question,
-                        contextQuestions,
-                        true // Always use context in basic mode
-                    );
-            }
-
-            // Use vision model if there's a captured image
-            const model = lastCapturedImage ? settings.ai.visionModel : settings.ai.model;
-            const answer = await ollamaService.generateAnswer(model, prompt, lastCapturedImage);
-
-            // Clear the captured image after using it
-            if (lastCapturedImage) {
-                lastCapturedImage = null;
-                capturePreview.style.display = 'none';
-            }
-
-            await window.electronAPI.updateQuestion(parseInt(id), qa.question, answer, true);
-            await loadQuestions();
-        } catch (error) {
-            console.error('Error generating answer:', error);
-            alert(`Error generating answer: ${error.message}`);
-            button.textContent = '🤖 Error - Try Again';
-        } finally {
-            hideLoading(button, '🤖 Generate Answer');
-        }
-    }
-
-    function showLoading(element, text) {
-        element.disabled = true;
-        element.innerHTML = `
-            <div class="loading-indicator">
-                <div class="spinner"></div>
-                ${text}
-            </div>
-        `;
-    }
-
-    function hideLoading(element, text) {
-        element.disabled = false;
-        element.textContent = text;
     }
 
     async function loadSettings() {
-        const settings = await window.electronAPI.getSettings();
-        applySettings(settings);
-    }
-
-    function applySettings(settings) {
-        if (settings.theme) {
-            document.body.style.setProperty('--background-color', settings.theme.backgroundColor);
-            document.body.style.setProperty('--accent-color', settings.theme.accentColor);
-            document.body.style.setProperty('--text-color', settings.theme.textColor);
-            document.body.style.fontFamily = settings.font;
-            document.body.style.fontSize = settings.fontSize;
+        try {
+            const settings = await window.electronAPI.getSettings();
+            applySettings(settings);
+        } catch (err) {
+            console.error(err);
+            announce('Failed to load settings');
         }
     }
 
+    function applySettings(settings) {
+        document.body.style.backgroundColor = settings.backgroundColor;
+        document.body.style.fontFamily = settings.font;
+        document.body.style.fontSize = settings.fontSize;
+        document.body.style.color = settings.fontColor;
+        document.body.style.textShadow = settings.textShadow;
+    }
+
     async function updateLastUsedApp() {
-        const lastUsedApp = await window.electronAPI.getLastUsedApp();
-        lastUsedAppDiv.textContent = `Last Used App: ${lastUsedApp || 'None'}`;
+        try {
+            const lastUsedApp = await window.electronAPI.getLastUsedApp();
+            lastUsedAppDiv.textContent = `Last Used App: ${lastUsedApp || 'None'}`;
+        } catch (err) {
+            console.error(err);
+            announce('Failed to update last used app');
+        }
     }
 
     async function editQuestion(id) {
@@ -479,7 +358,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function deleteQuestion(id) {
         await window.electronAPI.deleteQuestion(parseInt(id));
-        loadQuestions();
+        await loadQuestions();
     }
 
     document.addEventListener('keydown', (e) => {
@@ -492,6 +371,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             const index = parseInt(e.key) - 1;
             if (index < currentQuestions.length) {
+
                 const li = questionList.children[index];
                 li.focus();
             }
@@ -507,7 +387,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (e.key === 'd' && document.activeElement.tagName === 'LI') {
             e.preventDefault();
             const id = document.activeElement.dataset.id;
-            deleteQuestion(parseInt(id));
+            // SCRUM-10: confirmation before delete via keyboard
+            const qa = currentQuestions.find(q => q.id === parseInt(id));
+            const text = qa ? `Delete question: "${qa.question}"?` : 'Delete this question?';
+            if (confirm(text)) {
+                deleteQuestion(parseInt(id));
+            }
         } else if (e.key === 'Escape') {
             document.activeElement.blur();
         } else if (e.key === 'N' && e.shiftKey) {
@@ -519,4 +404,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.electronAPI.onFocusNewQuestion(() => {
         questionInput.focus();
     });
+
+    // Deep linking to open settings via hash: #settings
+    if (window.location.hash === '#settings') {
+        settingsBtn.click();
+    }
 });

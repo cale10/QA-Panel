@@ -3,84 +3,82 @@ class SettingsModal {
         this.modal = document.createElement('div');
         this.modal.className = 'modal-overlay';
         this.isVisible = false;
-        this.activeTab = 'theme';
-        this.themeSettings = new ThemeSettings();
-        this.aiSettings = new AISettings();
+        this.activeShortcutInput = null;
+        this.currentKeys = new Set();
         this.createModal();
+        // Bind focus trap handler
+        this.boundFocusTrapHandler = this.handleFocusTrapKeydown.bind(this);
     }
 
-    async createModal() {
+    createModal() {
+        // ... (previous HTML content remains the same until the end of setupEventListeners)
         this.modal.innerHTML = `
-            <div class="settings-modal">
+            <div class="settings-modal" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
                 <div class="modal-header">
-                    <h2>Settings</h2>
-                    <button class="close-button" id="closeSettingsBtn" title="Close (Esc)">×</button>
+                    <h2 id="settingsTitle">Settings</h2>
+                    <button class="close-button" id="closeSettingsBtn" aria-label="Close settings">×</button>
                 </div>
-                
+
                 <div class="settings-tabs">
-                    <button class="tab-button active" data-tab="theme">
-                        <span class="icon">🎨</span>
-                        <span>Theme</span>
-                    </button>
-                    <button class="tab-button" data-tab="ai">
-                        <span class="icon">🤖</span>
-                        <span>AI Features</span>
-                    </button>
-                    <button class="tab-button" data-tab="keyboard">
-                        <span class="icon">⌨️</span>
-                        <span>Keyboard</span>
-                    </button>
-                    <button class="tab-button" data-tab="advanced">
-                        <span class="icon">⚙️</span>
-                        <span>Advanced</span>
-                    </button>
+                    <button class="tab-button active" data-tab="appearance">Appearance</button>
+                    <button class="tab-button" data-tab="shortcuts">Keyboard Shortcuts</button>
                 </div>
 
                 <div class="settings-content">
-                    <div class="tab-panel active" id="themePanel"></div>
-                    <div class="tab-panel" id="aiPanel"></div>
+                    <div class="tab-panel active" id="appearancePanel">
+                        <div class="setting-group">
+                            <label>Background Color & Opacity</label>
+                            <input type="color" id="bgColorInput">
+                            <input type="range" id="bgOpacityInput" min="0" max="1" step="0.1">
+                        </div>
 
-                    <div class="tab-panel" id="keyboardPanel">
-                        <div class="section-group">
-                            <h3 class="section-title">Global Shortcuts</h3>
-                            <div class="shortcuts-list">
-                                <div class="shortcut-input">
-                                    <label>Show/Hide App</label>
-                                    <div class="input-field" tabindex="0" data-shortcut="toggleApp">Shift+Space</div>
-                                    <button class="reset-button">Reset</button>
-                                </div>
-                                <div class="shortcut-input">
-                                    <label>Focus New Question</label>
-                                    <div class="input-field" tabindex="0" data-shortcut="newQuestion">Shift+N</div>
-                                    <button class="reset-button">Reset</button>
-                                </div>
-                                <div class="shortcut-input">
-                                    <label>Export Data</label>
-                                    <div class="input-field" tabindex="0" data-shortcut="exportData">Ctrl+Shift+E</div>
-                                    <button class="reset-button">Reset</button>
-                                </div>
-                                <div class="shortcut-input">
-                                    <label>Import Data</label>
-                                    <div class="input-field" tabindex="0" data-shortcut="importData">Ctrl+Shift+I</div>
-                                    <button class="reset-button">Reset</button>
-                                </div>
-                            </div>
+                        <div class="setting-group">
+                            <label>Font Family</label>
+                            <select id="fontFamilyInput">
+                                <option value="Arial">Arial</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Courier New">Courier New</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-group">
+                            <label>Font Size</label>
+                            <select id="fontSizeInput">
+                                <option value="12px">Small</option>
+                                <option value="16px">Medium</option>
+                                <option value="20px">Large</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-group">
+                            <label>Text Color</label>
+                            <input type="color" id="textColorInput">
                         </div>
                     </div>
 
-                    <div class="tab-panel" id="advancedPanel">
-                        <div class="section-group">
-                            <h3 class="section-title">Data Management</h3>
-                            <div class="setting-group">
-                                <button class="action-button" id="exportDataBtn">Export Data</button>
-                                <button class="action-button" id="importDataBtn">Import Data</button>
+                    <div class="tab-panel" id="shortcutsPanel">
+                        <div class="shortcuts-list">
+                            <h3>Global Shortcuts</h3>
+                            <div class="shortcut-input">
+                                <label>Show/Hide App</label>
+                                <div class="input-field" tabindex="0" data-shortcut="toggleApp">Shift+Space</div>
+                                <button class="reset-button">Reset</button>
                             </div>
-                        </div>
-                        <div class="section-group">
-                            <h3 class="section-title">Updates</h3>
-                            <div class="setting-group">
-                                <button class="action-button" id="checkUpdatesBtn">Check for Updates</button>
-                                <p class="setting-description">Note: Planning to upgrade to Llama 3.2 vision model</p>
+                            <div class="shortcut-input">
+                                <label>Focus New Question</label>
+                                <div class="input-field" tabindex="0" data-shortcut="newQuestion">Shift+N</div>
+                                <button class="reset-button">Reset</button>
+                            </div>
+                            <div class="shortcut-input">
+                                <label>Export Data</label>
+                                <div class="input-field" tabindex="0" data-shortcut="exportData">Ctrl+Shift+E</div>
+                                <button class="reset-button">Reset</button>
+                            </div>
+                            <div class="shortcut-input">
+                                <label>Import Data</label>
+                                <div class="input-field" tabindex="0" data-shortcut="importData">Ctrl+Shift+I</div>
+                                <button class="reset-button">Reset</button>
                             </div>
                         </div>
                     </div>
@@ -92,16 +90,6 @@ class SettingsModal {
                 </div>
             </div>
         `;
-
-        // Add Theme settings panel
-        const themePanel = this.modal.querySelector('#themePanel');
-        const themeElement = await this.themeSettings.getElement();
-        themePanel.appendChild(themeElement);
-
-        // Add AI settings panel
-        const aiPanel = this.modal.querySelector('#aiPanel');
-        const aiElement = await this.aiSettings.getElement();
-        aiPanel.appendChild(aiElement);
 
         this.setupEventListeners();
     }
@@ -118,20 +106,6 @@ class SettingsModal {
         cancelBtn.addEventListener('click', () => this.hide());
         saveBtn.addEventListener('click', () => this.saveSettings());
 
-        // Add Escape key handler
-        this.modal.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && !this.capturingShortcut) {
-                this.hide();
-            }
-        });
-
-        // Close when clicking outside the modal
-        this.modal.addEventListener('click', (e) => {
-            if (e.target === this.modal) {
-                this.hide();
-            }
-        });
-
         tabButtons.forEach(button => {
             button.addEventListener('click', () => this.switchTab(button.dataset.tab));
         });
@@ -139,7 +113,6 @@ class SettingsModal {
         shortcutInputs.forEach(input => {
             input.addEventListener('click', () => this.startShortcutCapture(input));
             input.addEventListener('blur', () => this.stopShortcutCapture());
-            input.addEventListener('keydown', (e) => this.handleShortcutCapture(e, input));
         });
 
         resetButtons.forEach(button => {
@@ -150,14 +123,81 @@ class SettingsModal {
             });
         });
 
-        // Advanced tab buttons
-        const exportBtn = this.modal.querySelector('#exportDataBtn');
-        const importBtn = this.modal.querySelector('#importDataBtn');
-        const updateBtn = this.modal.querySelector('#checkUpdatesBtn');
+        // Global keydown/keyup handlers for shortcut capture
+        document.addEventListener('keydown', this.handleKeyDown.bind(this));
+        document.addEventListener('keyup', this.handleKeyUp.bind(this));
+    }
 
-        if (exportBtn) exportBtn.addEventListener('click', () => this.exportData());
-        if (importBtn) importBtn.addEventListener('click', () => this.importData());
-        if (updateBtn) updateBtn.addEventListener('click', () => this.checkUpdates());
+    handleKeyDown(e) {
+        if (!this.activeShortcutInput) return;
+
+        e.preventDefault();
+
+        // Add the key to our set
+        if (e.key === 'Control') this.currentKeys.add('Ctrl');
+        else if (e.key === 'Shift') this.currentKeys.add('Shift');
+        else if (e.key === 'Alt') this.currentKeys.add('Alt');
+        else if (!['Control', 'Shift', 'Alt'].includes(e.key)) {
+            // Capitalize first letter of key for better display
+            const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+            this.currentKeys.add(key);
+        }
+
+        // Update the display
+        this.updateShortcutDisplay();
+    }
+
+    handleKeyUp(e) {
+        if (!this.activeShortcutInput) return;
+
+        // If it's not a modifier key and we have a combination, complete the capture
+        if (!['Control', 'Shift', 'Alt'].includes(e.key)) {
+            this.completeShortcutCapture();
+        } else {
+            // Remove the modifier key from our set
+            if (e.key === 'Control') this.currentKeys.delete('Ctrl');
+            else if (e.key === 'Shift') this.currentKeys.delete('Shift');
+            else if (e.key === 'Alt') this.currentKeys.delete('Alt');
+            this.updateShortcutDisplay();
+        }
+    }
+
+    updateShortcutDisplay() {
+        if (this.activeShortcutInput) {
+            const keys = Array.from(this.currentKeys);
+            this.activeShortcutInput.textContent = keys.length > 0 ? keys.join('+') : 'Press shortcut...';
+        }
+    }
+
+    startShortcutCapture(input) {
+        if (this.activeShortcutInput) {
+            this.stopShortcutCapture();
+        }
+
+        this.activeShortcutInput = input;
+        this.currentKeys.clear();
+        input.textContent = 'Press shortcut...';
+        input.classList.add('capturing');
+    }
+
+    stopShortcutCapture() {
+        if (this.activeShortcutInput) {
+            this.activeShortcutInput.classList.remove('capturing');
+            if (this.currentKeys.size === 0) {
+                // Restore the previous value if no new shortcut was set
+                this.loadCurrentSettings();
+            }
+            this.activeShortcutInput = null;
+            this.currentKeys.clear();
+        }
+    }
+
+    completeShortcutCapture() {
+        if (this.activeShortcutInput && this.currentKeys.size > 0) {
+            const shortcut = Array.from(this.currentKeys).join('+');
+            this.activeShortcutInput.textContent = shortcut;
+            this.stopShortcutCapture();
+        }
     }
 
     switchTab(tabName) {
@@ -171,8 +211,6 @@ class SettingsModal {
         panels.forEach(panel => {
             panel.classList.toggle('active', panel.id === `${tabName}Panel`);
         });
-
-        this.activeTab = tabName;
     }
 
     async show() {
@@ -180,8 +218,9 @@ class SettingsModal {
             document.body.appendChild(this.modal);
             this.isVisible = true;
             await this.loadCurrentSettings();
-            // Focus the close button for keyboard accessibility
-            this.modal.querySelector('#closeSettingsBtn').focus();
+            // Setup focus trap and initial focus
+            this.setupInitialFocus();
+            document.addEventListener('keydown', this.boundFocusTrapHandler, true);
         }
     }
 
@@ -189,92 +228,51 @@ class SettingsModal {
         if (this.isVisible) {
             document.body.removeChild(this.modal);
             this.isVisible = false;
-            this.capturingShortcut = false;
-        }
-    }
-
-    startShortcutCapture(input) {
-        this.capturingShortcut = true;
-        input.classList.add('capturing');
-        input.textContent = 'Press keys...';
-    }
-
-    stopShortcutCapture() {
-        const input = this.modal.querySelector('.capturing');
-        if (input) {
-            input.classList.remove('capturing');
-            if (input.textContent === 'Press keys...') {
-                const shortcutName = input.dataset.shortcut;
-                this.resetShortcut(shortcutName, input);
-            }
-        }
-        this.capturingShortcut = false;
-    }
-
-    handleShortcutCapture(e, input) {
-        if (!input.classList.contains('capturing')) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        const keys = [];
-        if (e.ctrlKey) keys.push('Ctrl');
-        if (e.shiftKey) keys.push('Shift');
-        if (e.altKey) keys.push('Alt');
-        if (e.metaKey) keys.push('Meta');
-
-        const key = e.key;
-        if (!['Control', 'Shift', 'Alt', 'Meta'].includes(key)) {
-            keys.push(key.length === 1 ? key.toUpperCase() : key);
-        }
-
-        if (keys.length > 0) {
-            input.textContent = keys.join('+');
-            input.classList.remove('capturing');
-            input.blur();
-            this.capturingShortcut = false;
+            this.stopShortcutCapture();
+            // Remove focus trap listener
+            document.removeEventListener('keydown', this.boundFocusTrapHandler, true);
         }
     }
 
     async loadCurrentSettings() {
         const settings = await window.electronAPI.getSettings();
 
+        // Load appearance settings
+        const bgColor = settings.backgroundColor.split(',');
+        this.modal.querySelector('#bgColorInput').value = bgColor[0];
+        this.modal.querySelector('#bgOpacityInput').value = parseFloat(bgColor[3]);
+        this.modal.querySelector('#fontFamilyInput').value = settings.font;
+        this.modal.querySelector('#fontSizeInput').value = settings.fontSize;
+        this.modal.querySelector('#textColorInput').value = settings.fontColor;
+
         // Load shortcuts
-        Object.entries(settings.shortcuts || {}).forEach(([name, value]) => {
+        Object.entries(settings.shortcuts).forEach(([name, value]) => {
             const input = this.modal.querySelector(`[data-shortcut="${name}"]`);
             if (input) {
                 input.textContent = value;
             }
         });
-
-        // Load AI settings
-        if (settings.ai) {
-            await this.aiSettings.setSettings(settings.ai);
-        }
-
-        // Load theme settings
-        if (settings.theme) {
-            await this.themeSettings.setSettings(settings.theme);
-        }
     }
 
     async saveSettings() {
-        const settings = await window.electronAPI.getSettings();
+        const bgColor = this.modal.querySelector('#bgColorInput').value;
+        const opacity = this.modal.querySelector('#bgOpacityInput').value;
+        const backgroundColor = `rgba(${parseInt(bgColor.substr(1,2), 16)}, ${parseInt(bgColor.substr(3,2), 16)}, ${parseInt(bgColor.substr(5,2), 16)}, ${opacity})`;
 
-        // Save shortcuts
-        const shortcuts = {};
-        this.modal.querySelectorAll('[data-shortcut]').forEach(input => {
-            shortcuts[input.dataset.shortcut] = input.textContent;
-        });
-
-        const newSettings = {
-            ...settings,
-            shortcuts,
-            ai: this.aiSettings.getSettings(),
-            theme: this.themeSettings.getSettings()
+        const settings = {
+            backgroundColor,
+            font: this.modal.querySelector('#fontFamilyInput').value,
+            fontSize: this.modal.querySelector('#fontSizeInput').value,
+            fontColor: this.modal.querySelector('#textColorInput').value,
+            shortcuts: {}
         };
 
-        await window.electronAPI.updateSettings(newSettings);
+        // Save shortcuts
+        this.modal.querySelectorAll('[data-shortcut]').forEach(input => {
+            settings.shortcuts[input.dataset.shortcut] = input.textContent;
+        });
+
+        await window.electronAPI.updateSettings(settings);
         this.hide();
         window.location.reload();
     }
@@ -286,38 +284,52 @@ class SettingsModal {
             exportData: 'Ctrl+Shift+E',
             importData: 'Ctrl+Shift+I'
         };
-
         input.textContent = defaultShortcuts[shortcutName] || '';
     }
 
-    async exportData() {
-        const { filePath } = await window.electronAPI.showSaveDialog({
-            title: 'Export Data',
-            defaultPath: 'qa-panel-backup.json',
-            filters: [{ name: 'JSON Files', extensions: ['json'] }]
-        });
+    // Focus trap helpers
+    getFocusableElements() {
+        const dialog = this.modal.querySelector('.settings-modal');
+        if (!dialog) return [];
+        const focusableSelectors = [
+            'a[href]', 'area[href]', 'input:not([disabled])', 'select:not([disabled])',
+            'textarea:not([disabled])', 'button:not([disabled])', 'iframe', 'object', 'embed',
+            '[contenteditable]', '[tabindex]:not([tabindex="-1"])'
+        ];
+        return Array.from(dialog.querySelectorAll(focusableSelectors.join(',')))
+            .filter(el => el.offsetParent !== null || el === document.activeElement);
+    }
 
-        if (filePath) {
-            await window.electronAPI.exportData(filePath);
+    setupInitialFocus() {
+        // Try focusing the close button first; otherwise the first focusable element
+        const closeBtn = this.modal.querySelector('#closeSettingsBtn');
+        const toFocus = closeBtn || this.getFocusableElements()[0];
+        if (toFocus && typeof toFocus.focus === 'function') {
+            toFocus.focus();
         }
     }
 
-    async importData() {
-        const { filePaths } = await window.electronAPI.showOpenDialog({
-            title: 'Import Data',
-            filters: [{ name: 'JSON Files', extensions: ['json'] }],
-            properties: ['openFile']
-        });
+    handleFocusTrapKeydown(e) {
+        if (!this.isVisible) return;
+        if (e.key !== 'Tab') return;
+        const focusables = this.getFocusableElements();
+        if (focusables.length === 0) return;
 
-        if (filePaths && filePaths[0]) {
-            await window.electronAPI.importData(filePaths[0]);
-            window.location.reload();
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+
+        if (e.shiftKey) {
+            if (active === first || !this.modal.contains(active)) {
+                e.preventDefault();
+                last.focus();
+            }
+        } else {
+            if (active === last || !this.modal.contains(active)) {
+                e.preventDefault();
+                first.focus();
+            }
         }
-    }
-
-    async checkUpdates() {
-        // TODO: Implement update check
-        alert('Update check feature coming soon!\nPlanned upgrade: Llama 3.2 vision model');
     }
 }
 

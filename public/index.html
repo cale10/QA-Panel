@@ -1,63 +1,284 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>QA Panel</title>
-    <link rel="stylesheet" href="styles/theme.css">
-    <link rel="stylesheet" href="styles/main.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA-Panel</title>
     <link rel="stylesheet" href="styles/settings.css">
-    <link rel="stylesheet" href="styles/ai-settings.css">
     <link rel="stylesheet" href="styles/shortcuts.css">
-    <link rel="stylesheet" href="styles/theme-settings.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: rgba(28, 28, 28, 0.9);
+            color: #ffffff;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: rgba(40, 40, 40, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #ffa500;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input, textarea {
+            padding: 10px;
+            font-size: 16px;
+            background-color: rgba(60, 60, 60, 0.9);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #ffa500;
+        }
+        button {
+            padding: 10px;
+            background-color: #ffa500;
+            color: #000000;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #ffb52e;
+        }
+        #questionList {
+            list-style-type: none;
+            padding: 0;
+        }
+        #questionList li {
+            background-color: rgba(60, 60, 60, 0.9);
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 4px;
+            position: relative;
+        }
+        #questionList li:focus {
+            outline: 2px solid #ffa500;
+            background-color: rgba(80, 80, 80, 0.9);
+        }
+        .question-number {
+            position: absolute;
+            left: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #ffa500;
+            color: #000000;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .question-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .edit-btn, .delete-btn {
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        .edit-btn {
+            background-color: #4CAF50;
+        }
+        .delete-btn {
+            background-color: #f44336;
+        }
+        #lastUsedApp {
+            text-align: center;
+            margin-bottom: 20px;
+            font-style: italic;
+            color: #ffa500;
+        }
+        .settings-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .settings-button:hover {
+            border-color: #ffa500;
+            color: #ffa500;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        /* SCRUM-5: Non-blocking AI generation UI */
+        .answer-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .secondary {
+            background-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+        }
+        .secondary:hover {
+            border-color: #ffa500;
+            color: #ffa500;
+        }
+        .status-text {
+            font-size: 14px;
+            color: #ffa500;
+        }
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #ffa500;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* SCRUM-15: Accessibility focus and contrast */
+        button:focus-visible,
+        .settings-button:focus-visible,
+        .edit-btn:focus-visible,
+        .delete-btn:focus-visible,
+        input:focus-visible,
+        textarea:focus-visible {
+            outline: 3px solid #ffa500;
+            outline-offset: 2px;
+        }
+    </style>
+        <style>
+            :root { --accent: #ffa500; --muted: rgba(255,255,255,0.7); }
+            /* Enhanced list layout and scrolling */
+            #questionList { max-height: calc(100vh - 320px); overflow-y: auto; scroll-behavior: smooth; }
+            #questionList li { padding: 16px 16px 12px 48px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+            #questionList li:focus { outline: 2px solid var(--accent); background-color: rgba(80,80,80,0.9); }
+            .question-number { left: 12px; top: 16px; width: 28px; height: 28px; font-size: 14px; font-weight: 700; }
+            /* Q/A block structure */
+            .qa-question, .qa-answer { display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: start; }
+            .qa-answer { margin-top: 8px; }
+            .qa-label { display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: #000; background-color: var(--accent); border-radius: 6px; width: 28px; height: 28px; }
+            .qa-text { color: #ffffff; white-space: pre-wrap; word-break: break-word; }
+            .qa-text p { margin: 6px 0; }
+            .qa-text em { color: var(--muted); }
+            /* Buttons */
+            .edit-btn, .delete-btn { padding: 6px 12px; font-size: 14px; border-radius: 6px; }
+            /* Code formatting */
+            pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+            pre { margin: 8px 0; background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; overflow: auto; max-width: 100%; }
+            code { background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 4px; }
+            /* Small screens */
+            @media (max-width: 600px) {
+                #questionList { max-height: calc(100vh - 280px); }
+                #questionList li { padding-left: 44px; }
+                .question-number { left: 8px; top: 12px; width: 24px; height: 24px; font-size: 12px; }
+                .qa-question, .qa-answer { grid-template-columns: 24px 1fr; }
+                .qa-label { width: 24px; height: 24px; font-size: 12px; }
+            }
+        </style>
+
 </head>
 <body>
-    <div class="app-header">
-        <div>
-            <h1 class="app-title">QA-Panel</h1>
-            <div id="lastUsedApp" class="last-used-app">Last Used App: Windows Explorer</div>
-        </div>
-        <div class="header-controls">
-            <button id="settingsBtn" title="Settings">⚙️</button>
+
+    <div class="container" role="main">
+        <button class="settings-button" id="settingsBtn" aria-label="Open settings" aria-haspopup="dialog" aria-controls="settingsModal">⚙️ Settings</button>
+        <h1>QA-Panel</h1>
+        <div id="notification" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div id="lastUsedApp" role="status" aria-live="polite">Last Used App: Loading...</div>
+        <form id="questionForm" aria-labelledby="formHeading">
+            <label id="formHeading" for="questionInput">Question</label>
+            <input type="text" id="questionInput" placeholder="Enter your question" required>
+            <label for="answerInput">Answer</label>
+            <textarea id="answerInput" placeholder="Enter the answer (optional)" rows="3"></textarea>
+            <div class="answer-actions">
+                <button type="button" id="generateBtn" title="Generate an answer using AI (non-blocking)" aria-describedby="generateStatus">✨ Generate Answer</button>
+                <button type="button" id="cancelGenBtn" class="secondary" hidden>Cancel</button>
+                <span id="spinner" class="spinner" aria-hidden="true" hidden></span>
+                <span id="generateStatus" role="status" aria-live="polite" class="status-text"></span>
+            </div>
+
+    <div class="container" role="main">
+        <button class="settings-button" id="settingsBtn" aria-label="Open settings" aria-haspopup="dialog" aria-controls="settingsModal">⚙️ Settings</button>
+        <h1>QA-Panel</h1>
+        <div id="notification" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div id="lastUsedApp" role="status" aria-live="polite">Last Used App: Loading...</div>
+        <form id="questionForm" aria-labelledby="formHeading">
+            <label id="formHeading" for="questionInput">Question</label>
+            <input type="text" id="questionInput" placeholder="Enter your question" required>
+            <label for="answerInput">Answer</label>
+            <textarea id="answerInput" placeholder="Enter the answer (optional)" rows="3"></textarea>
+
+            <button type="submit" id="submitBtn">Add Question</button>
+        </form>
+        <h2 id="qaHeading">Questions and Answers:</h2>
+        <ul id="questionList" role="list" aria-labelledby="qaHeading"></ul>
+
+        <!-- Shortcuts Overlay -->
+        <div id="shortcutsOverlay" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="shortcutsTitle">
+            <div class="shortcuts-modal" tabindex="-1">
+                <div class="modal-header">
+                    <h2 id="shortcutsTitle">Keyboard Shortcuts</h2>
+                    <button class="close-button" id="closeShortcutsBtn" aria-label="Close shortcuts">×</button>
+                </div>
+                <div class="shortcuts-list">
+                    <h3>Global</h3>
+                    <ul>
+                        <li>Show/Hide App: <code>Shift+Space</code></li>
+                        <li>Focus New Question: <code>Shift+N</code></li>
+                        <li>Export Data: <code>Ctrl+Shift+E</code></li>
+                        <li>Import Data: <code>Ctrl+Shift+I</code></li>
+                    </ul>
+                    <h3>In-App</h3>
+                    <ul>
+                        <li>Focus Question 1-4: <code>1-4</code></li>
+                        <li>Edit focused question: <code>q</code></li>
+                        <li>Edit focused answer: <code>a</code></li>
+                        <li>Delete focused question: <code>d</code></li>
+                        <li>Unfocus: <code>Escape</code></li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button class="reset-all-button" id="restoreShortcutsBtn">Restore defaults</button>
+                </div>
+            </div>
         </div>
     </div>
-
-    <form id="questionForm">
-        <div class="input-group">
-            <span class="icon">❓</span>
-            <input type="text" id="questionInput" placeholder="Enter your question...">
-        </div>
-        <div class="capture-settings">
-            <label class="toggle-switch">
-                <input type="checkbox" id="autoCapture">
-                <span class="toggle-slider"></span>
-                <span class="toggle-label">Auto-capture Screen</span>
-            </label>
-            <p class="control-description">Automatically capture screen when asking questions</p>
-        </div>
-        <textarea id="answerInput" placeholder="Enter or generate an answer... Use ``` for code blocks"></textarea>
-        <button type="submit" id="submitBtn">Add Question</button>
-    </form>
-
-    <h2 style="color: #ffa500; margin-top: 30px;">Questions and Answers:</h2>
-    <ul id="questionList"></ul>
-
-    <div class="capture-preview">
-        <button class="close-btn">×</button>
-        <img id="capturePreview" alt="Screen capture preview">
-    </div>
-
-    <!-- Load services first -->
-    <script src="services/OllamaService.js"></script>
-    <script src="services/ThemeService.js"></script>
-
-    <!-- Load base components -->
-    <script src="components/settings/ShortcutInput.js"></script>
-    <script src="components/settings/ShortcutsList.js"></script>
-    <script src="components/settings/ShortcutsModal.js"></script>
-    <script src="components/settings/AISettings.js"></script>
-    <script src="components/settings/ThemeSettings.js"></script>
     <script src="components/SettingsModal.js"></script>
-
-    <!-- Load main renderer last -->
     <script src="renderer.js"></script>
 </body>
 </html>

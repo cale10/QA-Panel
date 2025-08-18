@@ -291,8 +291,10 @@ function createWindow() {
 function createTray() {
     tray = new Tray(path.join(__dirname, 'tray-icon.png'));
     const contextMenu = Menu.buildFromTemplate([
-        { label: 'Show App', click: () => mainWindow.show() },
-        { label: 'Quit', click: () => { isQuitting = true; app.quit(); } }
+        { label: 'Show QA Panel', click: () => mainWindow.show() },
+        { label: 'Show Shortcuts', click: () => { mainWindow.show(); mainWindow.webContents.send('show-shortcuts-overlay'); } },
+        { type: 'separator' },
+        { label: 'Quit QA Panel', click: () => { isQuitting = true; app.quit(); } }
     ]);
     tray.setToolTip('QA Panel');
     tray.setContextMenu(contextMenu);
