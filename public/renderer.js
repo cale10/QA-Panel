@@ -185,10 +185,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     li.setAttribute('role', 'listitem');
                     li.setAttribute('tabindex', '0');
                     li.setAttribute('aria-label', `Question ${index + 1}: ${qa.question}`);
+
+                    const formatText = (text) => {
+                        if (!text) return '';
+                        // Basic fenced code block support: ```code```
+                        const fence = /```([\s\S]*?)```/g;
+                        let html = text.replace(fence, (m, code) => {
+                            const safe = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            return `<pre><code>${safe}</code></pre>`;
+                        });
+                        // Inline code: `code`
+                        html = html.replace(/`([^`]+)`/g, (m, code) => `<code>${code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code>`);
+                        // Escape remaining angle brackets to avoid injection, except allowed tags
+                        html = html.replace(/<(?!\/?(pre|code)\b)/g, '&lt;');
+                        return html;
+                    };
+
+                    const questionHTML = formatText(qa.question);
+                    const answerHTML = formatText(qa.answer || '');
+
                     li.innerHTML = `
                         <span class="question-number" aria-hidden="true">${index + 1}</span>
-                        <strong>Q: ${qa.question}</strong>
-                        <p>A: ${qa.answer || 'Not answered yet'}</p>
+                        <div class="qa-question">
+                            <span class="qa-label" aria-hidden="true">Q</span>
+                            <div class="qa-text">${questionHTML}</div>
+                        </div>
+                        <div class="qa-answer">
+                            <span class="qa-label" aria-hidden="true">A</span>
+                            <div class="qa-text">${answerHTML || '<em>Not answered yet</em>'}</div>
+                        </div>
                         <div class="question-actions">
                             <button class="edit-btn" data-id="${qa.id}" aria-label="Edit question ${index + 1}">Edit</button>
                             <button class="delete-btn" data-id="${qa.id}" aria-label="Delete question ${index + 1}">Delete</button>
