@@ -12,6 +12,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelGenBtn = document.getElementById('cancelGenBtn');
     const spinnerEl = document.getElementById('spinner');
     const generateStatus = document.getElementById('generateStatus');
+    const aiOptInToggle = document.getElementById('aiOptInToggle');
+    const aiResultsPanel = document.getElementById('aiResultsPanel');
+    const aiResultText = document.getElementById('aiResultText');
+    const aiError = document.getElementById('aiError');
+    const copyToAnswerBtn = document.getElementById('copyToAnswerBtn');
+    const clearResultBtn = document.getElementById('clearResultBtn');
     let editingId = null;
     let currentQuestions = [];
     let isEditing = false;
@@ -52,6 +58,63 @@ document.addEventListener('DOMContentLoaded', () => {
         closeShortcutsBtn.addEventListener('click', () => hideShortcutsOverlay());
     }
 
+    // SCRUM-22/33: Initialize opt-in state from settings
+    (async () => {
+        try {
+            const s = await window.electronAPI.getSettings();
+            if (aiOptInToggle) aiOptInToggle.checked = !!s.ai?.enabled;
+        } catch {}
+    })();
+    aiOptInToggle?.addEventListener('change', async (e) => {
+        try {
+            const s = await window.electronAPI.getSettings();
+            await window.electronAPI.updateSettings({ ...s, ai: { ...(s.ai||{}), enabled: e.target.checked } });
+            announce(e.target.checked ? 'AI enabled' : 'AI disabled');
+        } catch (err) { console.error(err); announce('Failed to update AI setting'); }
+    });
+
+    // SCRUM-33/34: Generate via Ollama and populate results panel
+    async function doGenerate() {
+        aiError.style.display = 'none';
+        aiResultsPanel.style.display = 'none';
+        aiResultText.textContent = '';
+
+        const s = await window.electronAPI.getSettings();
+        if (!s.ai?.enabled) {
+            announce('Enable AI to generate answers');
+            return;
+        }
+        const model = s.ai?.useVision ? (s.ai?.visionModel || 'llava:latest') : (s.ai?.model || 'llama2');
+        const prompt = questionInput.value.trim();
+        if (!prompt) { questionInput.focus(); return; }
+        spinnerEl.hidden = false; cancelGenBtn.hidden = false; generateBtn.disabled = true; generateStatus.textContent = 'Generating...';
+        let canceled = false;
+        const controller = new AbortController();
+        abortGen = () => { canceled = true; controller.abort(); };
+        try {
+            // Note: imageData handling can be added when UI allows attaching an image
+            const resp = await window.electronAPI.ollamaGenerateAnswer(model, prompt, null);
+            if (canceled) return;
+            aiResultText.textContent = resp || '';
+            aiResultsPanel.style.display = 'block';
+            generateStatus.textContent = resp ? 'Done' : 'No content';
+        } catch (err) {
+            console.error(err);
+            aiError.textContent = err?.message || 'Generation failed';
+            aiError.style.display = 'block';
+            aiResultsPanel.style.display = 'block';
+            generateStatus.textContent = 'Error';
+        } finally {
+            spinnerEl.hidden = true; cancelGenBtn.hidden = true; generateBtn.disabled = false;
+            setTimeout(() => (generateStatus.textContent = ''), 1500);
+            abortGen = null;
+        }
+    }
+
+    generateBtn?.addEventListener('click', doGenerate);
+    cancelGenBtn?.addEventListener('click', () => { if (abortGen) abortGen(); });
+    copyToAnswerBtn?.addEventListener('click', () => { answerInput.value = aiResultText.textContent; answerInput.focus(); });
+    clearResultBtn?.addEventListener('click', () => { aiResultText.textContent=''; aiResultsPanel.style.display='none'; aiError.style.display='none'; });
     // Handle tray "Show Shortcuts" action
     if (window.electronAPI.onShowShortcutsOverlay) {
         window.electronAPI.onShowShortcutsOverlay(() => {
@@ -101,42 +164,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+
     // Minimal Generate flow using Ollama via IPC
-    generateBtn.addEventListener('click', async () => {
-        const prompt = questionInput.value.trim();
-        if (!prompt) {
-            questionInput.focus();
-            return;
-        }
-        // UI state
-        spinnerEl.hidden = false;
-        generateBtn.disabled = true;
-        generateStatus.textContent = 'Generating...';
-        try {
-            const resp = await window.electronAPI.ollamaGenerate(prompt, { manual: true });
-            if (resp?.skipped) {
-                generateStatus.textContent = 'Manual generate required (enable in settings)';
-            } else if (resp?.error) {
-                console.error(resp.error);
-                generateStatus.textContent = 'Error generating';
-            } else {
-                const text = resp?.response ?? resp?.raw ?? '';
-                if (text) {
-                    answerInput.value = text;
-                    generateStatus.textContent = 'Done';
-                } else {
-                    generateStatus.textContent = 'No response';
-                }
-            }
-        } catch (err) {
-            console.error(err);
-            generateStatus.textContent = 'Error generating';
-        } finally {
-            spinnerEl.hidden = true;
-            generateBtn.disabled = false;
-            setTimeout(() => (generateStatus.textContent = ''), 1500);
-        }
-    });
+
 
 
 
@@ -218,67 +248,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // SCRUM-5: Non-blocking generation
-    let abortGen = null;
 
-    generateBtn.addEventListener('click', async () => {
-        if (!questionInput.value.trim()) {
-            questionInput.focus();
-            return;
-        }
-        // Setup UI state
-        spinnerEl.hidden = false;
-        cancelGenBtn.hidden = false;
-        generateBtn.disabled = true;
-        generateStatus.textContent = 'Generating...';
+=======
 
-        // Simulated async generation with AbortController
-        const controller = new AbortController();
-        abortGen = () => controller.abort();
 
-        try {
-            const answer = await simulateGeneration(questionInput.value.trim(), { signal: controller.signal });
-            if (!controller.signal.aborted) {
-                answerInput.value = answer;
-                generateStatus.textContent = 'Done';
-            }
-        } catch (err) {
-            if (controller.signal.aborted) {
-                generateStatus.textContent = 'Canceled';
-            } else {
-                console.error(err);
-                generateStatus.textContent = 'Error generating';
-            }
-        } finally {
-            spinnerEl.hidden = true;
-            cancelGenBtn.hidden = true;
-            generateBtn.disabled = false;
-            setTimeout(() => (generateStatus.textContent = ''), 1500);
-            abortGen = null;
-        }
-    });
 
-    cancelGenBtn.addEventListener('click', () => {
-        if (abortGen) abortGen();
-    });
 
-    function simulateGeneration(prompt, { signal }) {
-        // This simulates a streaming/long-running generation and supports cancel
-        return new Promise((resolve, reject) => {
-            const duration = 2500 + Math.random() * 2000;
-            const timeout = setTimeout(() => {
-                resolve(`Suggested answer for: ${prompt}`);
-            }, duration);
-
-            const onAbort = () => {
-                clearTimeout(timeout);
-                reject(new DOMException('Aborted', 'AbortError'));
-            };
-
-            if (signal.aborted) return onAbort();
-            signal.addEventListener('abort', onAbort, { once: true });
-        });
-    }
 
 
     // Overlay restore defaults button

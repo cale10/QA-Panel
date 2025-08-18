@@ -6,15 +6,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getQuestions: () => ipcRenderer.invoke('get-questions'),
     updateQuestion: (id, question, answer) => ipcRenderer.invoke('update-question', id, question, answer),
     deleteQuestion: (id) => ipcRenderer.invoke('delete-question', id),
-    
+
     // Settings management
     getSettings: () => ipcRenderer.invoke('get-settings'),
     updateSettings: (newSettings) => ipcRenderer.invoke('update-settings', newSettings),
-    
+
     // Last used app
     getLastUsedApp: () => ipcRenderer.invoke('get-last-used-app'),
     onUpdateLastUsedApp: (callback) => ipcRenderer.on('update-last-used-app', callback),
-    
+
     // Keyboard shortcuts
     onFocusNewQuestion: (callback) => ipcRenderer.on('focus-new-question', callback),
     onShowShortcutsOverlay: (callback) => ipcRenderer.on('show-shortcuts-overlay', callback),
@@ -25,8 +25,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     exportData: (filePath) => ipcRenderer.invoke('export-data', filePath),
     importData: (filePath) => ipcRenderer.invoke('import-data', filePath),
     showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
+
+    // Ollama
+    ollamaIsRunning: () => ipcRenderer.invoke('ollama-is-running'),
+    ollamaListModels: () => ipcRenderer.invoke('ollama-list-models'),
+    ollamaGenerateAnswer: (model, prompt, imageData) => ipcRenderer.invoke('ollama-generate-answer', model, prompt, imageData),
     showOpenDialog: (options) => ipcRenderer.invoke('show-open-dialog', options),
-    
+
     // Event cleanup
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
 
