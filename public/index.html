@@ -138,6 +138,36 @@
             z-index: 1000;
         }
     </style>
+        <style>
+            :root { --accent: #ffa500; --muted: rgba(255,255,255,0.7); }
+            /* Enhanced list layout and scrolling */
+            #questionList { max-height: calc(100vh - 320px); overflow-y: auto; scroll-behavior: smooth; }
+            #questionList li { padding: 16px 16px 12px 48px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+            #questionList li:focus { outline: 2px solid var(--accent); background-color: rgba(80,80,80,0.9); }
+            .question-number { left: 12px; top: 16px; width: 28px; height: 28px; font-size: 14px; font-weight: 700; }
+            /* Q/A block structure */
+            .qa-question, .qa-answer { display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: start; }
+            .qa-answer { margin-top: 8px; }
+            .qa-label { display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: #000; background-color: var(--accent); border-radius: 6px; width: 28px; height: 28px; }
+            .qa-text { color: #ffffff; white-space: pre-wrap; word-break: break-word; }
+            .qa-text p { margin: 6px 0; }
+            .qa-text em { color: var(--muted); }
+            /* Buttons */
+            .edit-btn, .delete-btn { padding: 6px 12px; font-size: 14px; border-radius: 6px; }
+            /* Code formatting */
+            pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+            pre { margin: 8px 0; background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; overflow: auto; max-width: 100%; }
+            code { background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 4px; }
+            /* Small screens */
+            @media (max-width: 600px) {
+                #questionList { max-height: calc(100vh - 280px); }
+                #questionList li { padding-left: 44px; }
+                .question-number { left: 8px; top: 12px; width: 24px; height: 24px; font-size: 12px; }
+                .qa-question, .qa-answer { grid-template-columns: 24px 1fr; }
+                .qa-label { width: 24px; height: 24px; font-size: 12px; }
+            }
+        </style>
+
 </head>
 <body>
     <div class="container" role="main">
