@@ -17,7 +17,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // Keyboard shortcuts
     onFocusNewQuestion: (callback) => ipcRenderer.on('focus-new-question', callback),
-    
+    onShowShortcutsOverlay: (callback) => ipcRenderer.on('show-shortcuts-overlay', callback),
+    onExportData: (callback) => ipcRenderer.on('export-data', callback),
+    onImportData: (callback) => ipcRenderer.on('import-data', callback),
+
     // Import/Export
     exportData: (filePath) => ipcRenderer.invoke('export-data', filePath),
     importData: (filePath) => ipcRenderer.invoke('import-data', filePath),

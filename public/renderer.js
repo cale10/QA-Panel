@@ -12,6 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let isEditing = false;
     let settingsModal = null;
 
+    // Shortcuts overlay elements
+    const shortcutsOverlay = document.getElementById('shortcutsOverlay');
+    const closeShortcutsBtn = document.getElementById('closeShortcutsBtn');
+
     // Load existing questions and settings
     loadQuestions();
     loadSettings();
@@ -23,12 +27,62 @@ document.addEventListener('DOMContentLoaded', () => {
         loadQuestions();
     });
 
+    // Shortcuts overlay events
+    function showShortcutsOverlay() {
+        if (shortcutsOverlay) {
+            shortcutsOverlay.style.display = 'flex';
+            const modal = shortcutsOverlay.querySelector('.shortcuts-modal');
+            if (modal) modal.focus();
+        }
+    }
+
+    function hideShortcutsOverlay() {
+        if (shortcutsOverlay) {
+            shortcutsOverlay.style.display = 'none';
+        }
+    }
+
+    if (closeShortcutsBtn) {
+        closeShortcutsBtn.addEventListener('click', () => hideShortcutsOverlay());
+    }
+
+    // Handle tray "Show Shortcuts" action
+    if (window.electronAPI.onShowShortcutsOverlay) {
+        window.electronAPI.onShowShortcutsOverlay(() => {
+            showShortcutsOverlay();
+        });
+    }
+
+    // Allow Esc to close the overlay
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && shortcutsOverlay && shortcutsOverlay.style.display !== 'none') {
+            hideShortcutsOverlay();
+        }
+    });
+
     settingsBtn.addEventListener('click', () => {
         if (!settingsModal) {
             settingsModal = new SettingsModal();
         }
         settingsModal.show();
     });
+    // Overlay restore defaults button
+    const restoreShortcutsBtn = document.getElementById('restoreShortcutsBtn');
+    if (restoreShortcutsBtn) {
+        restoreShortcutsBtn.addEventListener('click', async () => {
+            // Reset global shortcuts to defaults via settings
+            const defaultShortcuts = {
+                toggleApp: 'Shift+Space',
+                newQuestion: 'Shift+N',
+                exportData: 'Ctrl+Shift+E',
+                importData: 'Ctrl+Shift+I'
+            };
+            const currentSettings = await window.electronAPI.getSettings();
+            await window.electronAPI.updateSettings({ shortcuts: defaultShortcuts });
+            hideShortcutsOverlay();
+        });
+    }
+
 
     questionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -93,13 +147,15 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             currentQuestions.forEach((qa, index) => {
                 const li = document.createElement('li');
+                li.setAttribute('role', 'listitem');
+                li.setAttribute('aria-label', `Question ${index + 1}: ${qa.question}`);
                 li.innerHTML = `
-                    <span class="question-number">${index + 1}</span>
+                    <span class="question-number" aria-hidden="true">${index + 1}</span>
                     <strong>Q: ${qa.question}</strong>
                     <p>A: ${qa.answer || 'Not answered yet'}</p>
                     <div class="question-actions">
-                        <button class="edit-btn" data-id="${qa.id}">Edit</button>
-                        <button class="delete-btn" data-id="${qa.id}">Delete</button>
+                        <button class="edit-btn" data-id="${qa.id}" aria-label="Edit question ${index + 1}">Edit</button>
+                        <button class="delete-btn" data-id="${qa.id}" aria-label="Delete question ${index + 1}">Delete</button>
                     </div>
                 `;
                 li.setAttribute('tabindex', '0');
@@ -160,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const index = parseInt(e.key) - 1;
             if (index < currentQuestions.length) {
+
                 const li = questionList.children[index];
                 li.focus();
             }
