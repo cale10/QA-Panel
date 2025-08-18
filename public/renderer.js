@@ -7,6 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const lastUsedAppDiv = document.getElementById('lastUsedApp');
     const settingsBtn = document.getElementById('settingsBtn');
 
+    const generateBtn = document.getElementById('generateBtn');
+    const cancelGenBtn = document.getElementById('cancelGenBtn');
+    const spinnerEl = document.getElementById('spinner');
+    const generateStatus = document.getElementById('generateStatus');
     let editingId = null;
     let currentQuestions = [];
     let isEditing = false;
@@ -29,6 +33,67 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         settingsModal.show();
     });
+    // SCRUM-5: Non-blocking generation
+    let abortGen = null;
+
+    generateBtn.addEventListener('click', async () => {
+        if (!questionInput.value.trim()) {
+            questionInput.focus();
+            return;
+        }
+        // Setup UI state
+        spinnerEl.hidden = false;
+        cancelGenBtn.hidden = false;
+        generateBtn.disabled = true;
+        generateStatus.textContent = 'Generating...';
+
+        // Simulated async generation with AbortController
+        const controller = new AbortController();
+        abortGen = () => controller.abort();
+
+        try {
+            const answer = await simulateGeneration(questionInput.value.trim(), { signal: controller.signal });
+            if (!controller.signal.aborted) {
+                answerInput.value = answer;
+                generateStatus.textContent = 'Done';
+            }
+        } catch (err) {
+            if (controller.signal.aborted) {
+                generateStatus.textContent = 'Canceled';
+            } else {
+                console.error(err);
+                generateStatus.textContent = 'Error generating';
+            }
+        } finally {
+            spinnerEl.hidden = true;
+            cancelGenBtn.hidden = true;
+            generateBtn.disabled = false;
+            setTimeout(() => (generateStatus.textContent = ''), 1500);
+            abortGen = null;
+        }
+    });
+
+    cancelGenBtn.addEventListener('click', () => {
+        if (abortGen) abortGen();
+    });
+
+    function simulateGeneration(prompt, { signal }) {
+        // This simulates a streaming/long-running generation and supports cancel
+        return new Promise((resolve, reject) => {
+            const duration = 2500 + Math.random() * 2000;
+            const timeout = setTimeout(() => {
+                resolve(`Suggested answer for: ${prompt}`);
+            }, duration);
+
+            const onAbort = () => {
+                clearTimeout(timeout);
+                reject(new DOMException('Aborted', 'AbortError'));
+            };
+
+            if (signal.aborted) return onAbort();
+            signal.addEventListener('abort', onAbort, { once: true });
+        });
+    }
 
     questionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -98,8 +163,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <strong>Q: ${qa.question}</strong>
                     <p>A: ${qa.answer || 'Not answered yet'}</p>
                     <div class="question-actions">
-                        <button class="edit-btn" data-id="${qa.id}">Edit</button>
-                        <button class="delete-btn" data-id="${qa.id}">Delete</button>
+                        <button class="edit-btn" data-id="${qa.id}" title="Edit this question (Shortcut: q)" aria-label="Edit question ${index + 1}">Edit</button>
+                        <button class="delete-btn" data-id="${qa.id}" title="Delete this question (Shortcut: d)" aria-label="Delete question ${index + 1}">Delete</button>
                     </div>
                 `;
                 li.setAttribute('tabindex', '0');
@@ -111,7 +176,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.addEventListener('click', (e) => editQuestion(e.target.dataset.id));
             });
             document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => deleteQuestion(e.target.dataset.id));
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.dataset.id;
+                    // SCRUM-10: confirmation before delete
+                    const qa = currentQuestions.find(q => q.id === parseInt(id));
+                    const text = qa ? `Delete question: "${qa.question}"?` : 'Delete this question?';
+                    if (confirm(text)) {
+                        deleteQuestion(id);
+                    }
+                });
             });
         }
     }
@@ -175,7 +248,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (e.key === 'd' && document.activeElement.tagName === 'LI') {
             e.preventDefault();
             const id = document.activeElement.dataset.id;
-            deleteQuestion(parseInt(id));
+            // SCRUM-10: confirmation before delete via keyboard
+            const qa = currentQuestions.find(q => q.id === parseInt(id));
+            const text = qa ? `Delete question: "${qa.question}"?` : 'Delete this question?';
+            if (confirm(text)) {
+                deleteQuestion(parseInt(id));
+            }
         } else if (e.key === 'Escape') {
             document.activeElement.blur();
         } else if (e.key === 'N' && e.shiftKey) {
