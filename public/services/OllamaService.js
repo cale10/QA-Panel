@@ -96,7 +96,7 @@ class OllamaService {
 
     async generateAnswer(model, prompt, imageData = null, opts = {}) {
         try {
-            const endpoint = imageData ? 'http://localhost:11434/api/generate' : 'http://localhost:11434/api/generate';
+            const endpoint = 'http://localhost:11434/api/generate';
             const body = {
                 model,
                 prompt,
@@ -116,6 +116,16 @@ class OllamaService {
 
             if (!response.ok) {
                 const msg = await response.text();
+                throw new Error(`Failed to generate answer: ${response.status} ${msg}`);
+            }
+
+            const data = await response.json();
+            return data.response || data.message?.content?.map(p => p.text).join('') || '';
+        } catch (error) {
+            console.error('Error generating answer:', error);
+            throw error;
+        }
+    }
 
     async chat(model, messages = [], stream = false) {
         const response = await fetch('http://localhost:11434/api/chat', {
@@ -141,18 +151,6 @@ class OllamaService {
         }
     }
 
-                throw new Error(`Failed to generate answer: ${response.status} ${msg}`);
-            }
-
-            const data = await response.json();
-            // Support both /generate and /chat styles
-            return data.response || data.message?.content?.map(p => p.text).join('') || '';
-        } catch (error) {
-            console.error('Error generating answer:', error);
-            throw error;
-        }
-    }
-
     async catalogModels() {
         const models = await this.listModels();
         const vision = models.filter(m => m.type === 'vision');
@@ -175,7 +173,6 @@ class OllamaService {
             defaultVisionModel: pick(vision, visionPriority)
         };
     }
-
 }
 
 // Export the class

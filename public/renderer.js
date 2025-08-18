@@ -163,6 +163,87 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // SCRUM-5: Non-blocking generation
+    let abortGen = null;
+
+    generateBtn.addEventListener('click', async () => {
+        if (!questionInput.value.trim()) {
+            questionInput.focus();
+            return;
+        }
+        // Setup UI state
+        spinnerEl.hidden = false;
+        cancelGenBtn.hidden = false;
+        generateBtn.disabled = true;
+        generateStatus.textContent = 'Generating...';
+
+        // Simulated async generation with AbortController
+        const controller = new AbortController();
+        abortGen = () => controller.abort();
+
+        try {
+            const answer = await simulateGeneration(questionInput.value.trim(), { signal: controller.signal });
+            if (!controller.signal.aborted) {
+                answerInput.value = answer;
+                generateStatus.textContent = 'Done';
+            }
+        } catch (err) {
+            if (controller.signal.aborted) {
+                generateStatus.textContent = 'Canceled';
+            } else {
+                console.error(err);
+                generateStatus.textContent = 'Error generating';
+            }
+        } finally {
+            spinnerEl.hidden = true;
+            cancelGenBtn.hidden = true;
+            generateBtn.disabled = false;
+            setTimeout(() => (generateStatus.textContent = ''), 1500);
+            abortGen = null;
+        }
+    });
+
+    cancelGenBtn.addEventListener('click', () => {
+        if (abortGen) abortGen();
+    });
+
+    function simulateGeneration(prompt, { signal }) {
+        // This simulates a streaming/long-running generation and supports cancel
+        return new Promise((resolve, reject) => {
+            const duration = 2500 + Math.random() * 2000;
+            const timeout = setTimeout(() => {
+                resolve(`Suggested answer for: ${prompt}`);
+            }, duration);
+
+            const onAbort = () => {
+                clearTimeout(timeout);
+                reject(new DOMException('Aborted', 'AbortError'));
+            };
+
+            if (signal.aborted) return onAbort();
+            signal.addEventListener('abort', onAbort, { once: true });
+        });
+    }
+
+    // Overlay restore defaults button
+    const restoreShortcutsBtn = document.getElementById('restoreShortcutsBtn');
+    if (restoreShortcutsBtn) {
+        restoreShortcutsBtn.addEventListener('click', async () => {
+            // Reset global shortcuts to defaults via settings
+            const defaultShortcuts = {
+                toggleApp: 'Shift+Space',
+                newQuestion: 'Shift+N',
+                exportData: 'Ctrl+Shift+E',
+                importData: 'Ctrl+Shift+I'
+            };
+            const currentSettings = await window.electronAPI.getSettings();
+            await window.electronAPI.updateSettings({ shortcuts: defaultShortcuts });
+            hideShortcutsOverlay();
+        });
+    }
+
+
+
     questionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         await addOrUpdateQuestion();
@@ -252,12 +333,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const formatText = (text) => {
                         if (!text) return '';
+                        // Basic fenced code block support: ```code```
                         const fence = /```([\s\S]*?)```/g;
                         let html = text.replace(fence, (m, code) => {
                             const safe = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                             return `<pre><code>${safe}</code></pre>`;
                         });
+                        // Inline code: `code`
                         html = html.replace(/`([^`]+)`/g, (m, code) => `<code>${code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code>`);
+                        // Escape remaining angle brackets to avoid injection, except allowed tags
                         html = html.replace(/<(?!\/?(pre|code)\b)/g, '&lt;');
                         return html;
                     };
@@ -276,8 +360,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="qa-text">${answerHTML || '<em>Not answered yet</em>'}</div>
                         </div>
                         <div class="question-actions">
-                            <button class="edit-btn" data-id="${qa.id}" aria-label="Edit question ${index + 1}">Edit</button>
-                            <button class="delete-btn" data-id="${qa.id}" aria-label="Delete question ${index + 1}">Delete</button>
+                            <button class="edit-btn" data-id="${qa.id}" title="Edit this question (Shortcut: q)" aria-label="Edit question ${index + 1}">Edit</button>
+                            <button class="delete-btn" data-id="${qa.id}" title="Delete this question (Shortcut: d)" aria-label="Delete question ${index + 1}">Delete</button>
                         </div>
                     `;
                     li.dataset.id = qa.id;
@@ -290,12 +374,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelectorAll('.delete-btn').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
                         const id = e.target.dataset.id;
-                        try {
-                            await deleteQuestion(id);
-                            announce('Question deleted');
-                        } catch (err) {
-                            console.error(err);
-                            announce('Failed to delete question');
+                        const qa = currentQuestions.find(q => q.id === parseInt(id));
+                        const text = qa ? `Delete question: "${qa.question}"?` : 'Delete this question?';
+                        if (confirm(text)) {
+                            try {
+                                await deleteQuestion(id);
+                                announce('Question deleted');
+                            } catch (err) {
+                                console.error(err);
+                                announce('Failed to delete question');
+                            }
                         }
                     });
                 });
