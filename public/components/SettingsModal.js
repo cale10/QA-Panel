@@ -6,17 +6,19 @@ class SettingsModal {
         this.activeShortcutInput = null;
         this.currentKeys = new Set();
         this.createModal();
+        // Bind focus trap handler
+        this.boundFocusTrapHandler = this.handleFocusTrapKeydown.bind(this);
     }
 
     createModal() {
         // ... (previous HTML content remains the same until the end of setupEventListeners)
         this.modal.innerHTML = `
-            <div class="settings-modal">
+            <div class="settings-modal" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
                 <div class="modal-header">
-                    <h2>Settings</h2>
-                    <button class="close-button" id="closeSettingsBtn">×</button>
+                    <h2 id="settingsTitle">Settings</h2>
+                    <button class="close-button" id="closeSettingsBtn" aria-label="Close settings">×</button>
                 </div>
-                
+
                 <div class="settings-tabs">
                     <button class="tab-button active" data-tab="appearance">Appearance</button>
                     <button class="tab-button" data-tab="shortcuts">Keyboard Shortcuts</button>
@@ -130,7 +132,7 @@ class SettingsModal {
         if (!this.activeShortcutInput) return;
 
         e.preventDefault();
-        
+
         // Add the key to our set
         if (e.key === 'Control') this.currentKeys.add('Ctrl');
         else if (e.key === 'Shift') this.currentKeys.add('Shift');
@@ -171,7 +173,7 @@ class SettingsModal {
         if (this.activeShortcutInput) {
             this.stopShortcutCapture();
         }
-        
+
         this.activeShortcutInput = input;
         this.currentKeys.clear();
         input.textContent = 'Press shortcut...';
@@ -216,6 +218,9 @@ class SettingsModal {
             document.body.appendChild(this.modal);
             this.isVisible = true;
             await this.loadCurrentSettings();
+            // Setup focus trap and initial focus
+            this.setupInitialFocus();
+            document.addEventListener('keydown', this.boundFocusTrapHandler, true);
         }
     }
 
@@ -224,12 +229,14 @@ class SettingsModal {
             document.body.removeChild(this.modal);
             this.isVisible = false;
             this.stopShortcutCapture();
+            // Remove focus trap listener
+            document.removeEventListener('keydown', this.boundFocusTrapHandler, true);
         }
     }
 
     async loadCurrentSettings() {
         const settings = await window.electronAPI.getSettings();
-        
+
         // Load appearance settings
         const bgColor = settings.backgroundColor.split(',');
         this.modal.querySelector('#bgColorInput').value = bgColor[0];
@@ -277,8 +284,52 @@ class SettingsModal {
             exportData: 'Ctrl+Shift+E',
             importData: 'Ctrl+Shift+I'
         };
-
         input.textContent = defaultShortcuts[shortcutName] || '';
+    }
+
+    // Focus trap helpers
+    getFocusableElements() {
+        const dialog = this.modal.querySelector('.settings-modal');
+        if (!dialog) return [];
+        const focusableSelectors = [
+            'a[href]', 'area[href]', 'input:not([disabled])', 'select:not([disabled])',
+            'textarea:not([disabled])', 'button:not([disabled])', 'iframe', 'object', 'embed',
+            '[contenteditable]', '[tabindex]:not([tabindex="-1"])'
+        ];
+        return Array.from(dialog.querySelectorAll(focusableSelectors.join(',')))
+            .filter(el => el.offsetParent !== null || el === document.activeElement);
+    }
+
+    setupInitialFocus() {
+        // Try focusing the close button first; otherwise the first focusable element
+        const closeBtn = this.modal.querySelector('#closeSettingsBtn');
+        const toFocus = closeBtn || this.getFocusableElements()[0];
+        if (toFocus && typeof toFocus.focus === 'function') {
+            toFocus.focus();
+        }
+    }
+
+    handleFocusTrapKeydown(e) {
+        if (!this.isVisible) return;
+        if (e.key !== 'Tab') return;
+        const focusables = this.getFocusableElements();
+        if (focusables.length === 0) return;
+
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+
+        if (e.shiftKey) {
+            if (active === first || !this.modal.contains(active)) {
+                e.preventDefault();
+                last.focus();
+            }
+        } else {
+            if (active === last || !this.modal.contains(active)) {
+                e.preventDefault();
+                first.focus();
+            }
+        }
     }
 }
 
