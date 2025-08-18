@@ -29,4 +29,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // Event cleanup
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
+
+    // Ollama
+    ollamaListModels: () => ipcRenderer.invoke('ollama-list-models'),
+    ollamaGenerate: (prompt, options) => ipcRenderer.invoke('ollama-generate', { prompt, options }),
+    ollamaChat: (messages, options) => ipcRenderer.invoke('ollama-chat', { messages, options }),
 });

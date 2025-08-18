@@ -22,6 +22,7 @@ class SettingsModal {
                 <div class="settings-tabs">
                     <button class="tab-button active" data-tab="appearance">Appearance</button>
                     <button class="tab-button" data-tab="shortcuts">Keyboard Shortcuts</button>
+                    <button class="tab-button" data-tab="ai">AI</button>
                 </div>
 
                 <div class="settings-content">
@@ -80,6 +81,35 @@ class SettingsModal {
                                 <div class="input-field" tabindex="0" data-shortcut="importData">Ctrl+Shift+I</div>
                                 <button class="reset-button">Reset</button>
                             </div>
+                        <div class="tab-panel" id="aiPanel">
+                            <div class="setting-group">
+                                <label>Provider</label>
+                                <select id="aiProvider">
+                                    <option value="ollama">Ollama (local)</option>
+                                </select>
+                            </div>
+                            <div class="setting-group">
+                                <label>Ollama Base URL</label>
+                                <input type="text" id="aiBaseUrl" placeholder="http://127.0.0.1:11434">
+                            </div>
+                            <div class="setting-group">
+                                <label>Model</label>
+                                <select id="aiModel">
+                                    <option value="">-- Select a model --</option>
+                                </select>
+                                <button id="refreshModelsBtn" class="reset-button" style="margin-left:8px">Refresh</button>
+                            </div>
+                            <div class="setting-group">
+                                <label>Temperature</label>
+                                <input type="number" id="aiTemperature" step="0.1" min="0" max="2" placeholder="0.7">
+                            </div>
+                            <div class="setting-group">
+                                <label>
+                                    <input type="checkbox" id="aiRequireManual"> Require manual Generate (opt-in answering)
+                                </label>
+                            </div>
+                        </div>
+
                         </div>
                     </div>
                 </div>
@@ -101,6 +131,17 @@ class SettingsModal {
         const tabButtons = this.modal.querySelectorAll('.tab-button');
         const shortcutInputs = this.modal.querySelectorAll('.input-field[data-shortcut]');
         const resetButtons = this.modal.querySelectorAll('.reset-button');
+
+        const aiProvider = this.modal.querySelector('#aiProvider');
+        const aiBaseUrl = this.modal.querySelector('#aiBaseUrl');
+        const aiModel = this.modal.querySelector('#aiModel');
+        const aiTemperature = this.modal.querySelector('#aiTemperature');
+        const aiRequireManual = this.modal.querySelector('#aiRequireManual');
+        const refreshModelsBtn = this.modal.querySelector('#refreshModelsBtn');
+
+        refreshModelsBtn?.addEventListener('click', async () => {
+            await this.loadModels(aiBaseUrl.value);
+        });
 
         closeBtn.addEventListener('click', () => this.hide());
         cancelBtn.addEventListener('click', () => this.hide());
@@ -252,6 +293,37 @@ class SettingsModal {
                 input.textContent = value;
             }
         });
+
+        // Load AI settings
+        const ai = settings.ai || {};
+        this.modal.querySelector('#aiProvider').value = ai.provider || 'ollama';
+        this.modal.querySelector('#aiBaseUrl').value = ai.baseUrl || 'http://127.0.0.1:11434';
+        this.modal.querySelector('#aiTemperature').value = ai.temperature ?? 0.7;
+        this.modal.querySelector('#aiRequireManual').checked = !!ai.requireManual;
+        await this.loadModels(ai.baseUrl);
+        if (ai.model) {
+            const modelSel = this.modal.querySelector('#aiModel');
+            if (modelSel) modelSel.value = ai.model;
+        }
+    }
+
+    async loadModels(baseUrl) {
+        try {
+            if (!baseUrl) baseUrl = 'http://127.0.0.1:11434';
+            const modelsResp = await window.electronAPI.ollamaListModels();
+            const modelSel = this.modal.querySelector('#aiModel');
+            modelSel.innerHTML = '<option value="">-- Select a model --</option>';
+            const tags = (modelsResp?.models || modelsResp?.data || modelsResp?.models) || [];
+            const list = tags.map(m => m.name || m.model || '').filter(Boolean);
+            list.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                modelSel.appendChild(opt);
+            });
+        } catch (e) {
+            console.error('Failed to load models', e);
+        }
     }
 
     async saveSettings() {
@@ -264,7 +336,14 @@ class SettingsModal {
             font: this.modal.querySelector('#fontFamilyInput').value,
             fontSize: this.modal.querySelector('#fontSizeInput').value,
             fontColor: this.modal.querySelector('#textColorInput').value,
-            shortcuts: {}
+            shortcuts: {},
+            ai: {
+                provider: this.modal.querySelector('#aiProvider').value,
+                baseUrl: this.modal.querySelector('#aiBaseUrl').value,
+                model: this.modal.querySelector('#aiModel').value,
+                temperature: parseFloat(this.modal.querySelector('#aiTemperature').value) || 0.7,
+                requireManual: this.modal.querySelector('#aiRequireManual').checked
+            }
         };
 
         // Save shortcuts
