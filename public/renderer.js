@@ -139,6 +139,148 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
+
+    cancelGenBtn.addEventListener('click', () => {
+        if (abortGen) abortGen();
+    });
+    // Vision generation
+    const visionGenBtn = document.getElementById('visionGenBtn');
+    if (visionGenBtn) {
+        visionGenBtn.addEventListener('click', async () => {
+            try {
+                // Honor model setting; fallback to minicpm-v if unspecified
+                const settings = await window.electronAPI.getSettings();
+                const model = settings?.ai?.visionModel || 'minicpm-v:latest';
+
+                // Ensure question exists
+                const question = questionInput.value.trim();
+                if (!question) {
+                    questionInput.focus();
+                    return;
+                }
+
+                // Request screenshot with consent
+                const { allowed, image } = await window.electronAPI.captureScreenWithConsent();
+                if (!allowed) {
+                    generateStatus.textContent = 'Screenshot denied';
+                    setTimeout(() => (generateStatus.textContent = ''), 1500);
+                    return;
+                }
+                if (!image) {
+                    generateStatus.textContent = 'No image captured';
+                    setTimeout(() => (generateStatus.textContent = ''), 1500);
+                    return;
+                }
+
+                // Call Ollama vision generate
+                spinnerEl.hidden = false;
+                generateBtn.disabled = true;
+                visionGenBtn.disabled = true;
+                generateStatus.textContent = 'Generating (vision)...';
+
+                const prompt = `You are assisting with ${settings.lastUsedApp || 'this application'}. Analyze the screenshot and answer: ${question}`;
+                const response = await window.electronAPI.ollamaGenerateAnswer(model, prompt, image);
+
+                if (response) {
+                    answerInput.value = String(response);
+                    generateStatus.textContent = 'Done (vision)';
+                } else {
+                    generateStatus.textContent = 'No response';
+                }
+            } catch (err) {
+                console.error(err);
+                generateStatus.textContent = 'Error (vision)';
+            } finally {
+                spinnerEl.hidden = true;
+                generateBtn.disabled = false;
+                if (visionGenBtn) visionGenBtn.disabled = false;
+                setTimeout(() => (generateStatus.textContent = ''), 1500);
+            }
+        });
+    }
+
+
+    function simulateGeneration(prompt, { signal }) {
+        // This simulates a streaming/long-running generation and supports cancel
+        return new Promise((resolve, reject) => {
+            const duration = 2500 + Math.random() * 2000;
+            const timeout = setTimeout(() => {
+                resolve(`Suggested answer for: ${prompt}`);
+            }, duration);
+
+            const onAbort = () => {
+                clearTimeout(timeout);
+                reject(new DOMException('Aborted', 'AbortError'));
+            };
+
+            if (signal.aborted) return onAbort();
+            signal.addEventListener('abort', onAbort, { once: true });
+        });
+    }
+
+    // SCRUM-5: Non-blocking generation
+    let abortGen = null;
+
+    generateBtn.addEventListener('click', async () => {
+        if (!questionInput.value.trim()) {
+            questionInput.focus();
+            return;
+        }
+        // Setup UI state
+        spinnerEl.hidden = false;
+        cancelGenBtn.hidden = false;
+        generateBtn.disabled = true;
+        generateStatus.textContent = 'Generating...';
+
+        // Simulated async generation with AbortController
+        const controller = new AbortController();
+        abortGen = () => controller.abort();
+
+        try {
+            const answer = await simulateGeneration(questionInput.value.trim(), { signal: controller.signal });
+            if (!controller.signal.aborted) {
+                answerInput.value = answer;
+                generateStatus.textContent = 'Done';
+            }
+        } catch (err) {
+            if (controller.signal.aborted) {
+                generateStatus.textContent = 'Canceled';
+            } else {
+                console.error(err);
+                generateStatus.textContent = 'Error generating';
+            }
+        } finally {
+            spinnerEl.hidden = true;
+            cancelGenBtn.hidden = true;
+            generateBtn.disabled = false;
+            setTimeout(() => (generateStatus.textContent = ''), 1500);
+            abortGen = null;
+        }
+    });
+
+    cancelGenBtn.addEventListener('click', () => {
+        if (abortGen) abortGen();
+    });
+
+    function simulateGeneration(prompt, { signal }) {
+        // This simulates a streaming/long-running generation and supports cancel
+        return new Promise((resolve, reject) => {
+            const duration = 2500 + Math.random() * 2000;
+            const timeout = setTimeout(() => {
+                resolve(`Suggested answer for: ${prompt}`);
+            }, duration);
+
+            const onAbort = () => {
+                clearTimeout(timeout);
+                reject(new DOMException('Aborted', 'AbortError'));
+            };
+
+            if (signal.aborted) return onAbort();
+            signal.addEventListener('abort', onAbort, { once: true });
+        });
+    }
+
+
     // Overlay restore defaults button
     const restoreShortcutsBtn = document.getElementById('restoreShortcutsBtn');
     if (restoreShortcutsBtn) {
