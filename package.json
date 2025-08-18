@@ -1,41 +1,37 @@
 {
   "name": "qa-panel",
   "version": "1.1.0",
-  "private": true,
+  "description": "A floating QA panel for applications",
   "main": "public/electron.js",
-  "dependencies": {
-    "active-win": "^8.1.0",
-    "electron-is-dev": "^2.0.0",
-    "electron-log": "^5.0.0-beta.16",
-    "electron-updater": "^5.3.0",
-    "qa-panel": "file:",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
-  },
-  "devDependencies": {
-    "electron": "^23.1.3",
-    "electron-builder": "^23.6.0"
-  },
+  "type": "commonjs",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder build --win --publish never"
+    "build": "electron-builder",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "active-win": "^8.1.1",
+    "electron-is-dev": "^2.0.0",
+    "electron-log": "^5.0.1",
+    "node-fetch": "2.6.7",
+    "qa-panel": "file:"
   },
   "build": {
-    "appId": "com.electron.qa-panel",
-    "productName": "QA Panel",
-    "files": [
-      "build/**/*",
-      "node_modules/**/*",
-      "package.json"
-    ],
-    "directories": {
-      "buildResources": "public"
+    "appId": "com.qa-panel.app",
+    "mac": {
+      "category": "public.app-category.utilities"
     },
     "win": {
-      "target": [
-        "nsis"
-      ],
-      "icon": "public/app-icon.png"
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
     }
   }
 }

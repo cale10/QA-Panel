@@ -1,0 +1,159 @@
+:root {
+    /* Default theme variables (dark theme) */
+    --background-color: #202124;
+    --secondary-background-color: #2d2e31;
+    --accent-color: #ffa500;
+    --text-color: #ffffff;
+    --border-color: #444444;
+    --input-background-color: #1e1e1e;
+    --hover-background-color: rgba(255, 255, 255, 0.03);
+    --shadow-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Global theme styles */
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+input, textarea, select {
+    background-color: var(--input-background-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+input:focus, textarea:focus, select:focus {
+    border-color: var(--accent-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.2);
+}
+
+button {
+    background-color: var(--accent-color);
+    color: var(--background-color);
+    border: 1px solid var(--border-color);
+}
+
+button:hover {
+    background-color: var(--accent-color);
+    opacity: 0.9;
+}
+
+button.secondary {
+    background-color: var(--secondary-background-color);
+    color: var(--text-color);
+}
+
+button.secondary:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.card, .panel, .modal {
+    background-color: var(--secondary-background-color);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.header, .footer {
+    background-color: var(--secondary-background-color);
+    border-color: var(--border-color);
+}
+
+/* Theme editor styles */
+.theme-editor {
+    background-color: var(--secondary-background-color);
+    border: 1px solid var(--border-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.theme-editor .input-field {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: var(--input-background-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 6px;
+    font-size: 0.95rem;
+}
+
+.theme-editor .color-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.theme-editor input[type="color"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.theme-editor input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.theme-editor input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 4px;
+}
+
+.theme-editor .color-text {
+    flex: 1;
+    padding: 0.5rem;
+    background-color: var(--input-background-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.action-button {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.action-button.danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.action-button.danger:hover {
+    background-color: #c82333;
+}
+
+/* Theme preview styles */
+.theme-preview {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.theme-preview .preview-header {
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.theme-preview .preview-content {
+    padding: 1rem;
+}
+
+.theme-preview .preview-input {
+    height: 30px;
+    border-radius: 4px;
+}

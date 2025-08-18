@@ -1,143 +1,107 @@
-import React, { useState, useEffect } from 'react';
-import ShortcutsList from './ShortcutsList';
-
-const defaultShortcuts = {
-    global: {
-        toggleApp: 'Shift+Space',
-        newQuestion: 'Shift+N',
-        exportData: 'Ctrl+Shift+E',
-        importData: 'Ctrl+Shift+I'
-    },
-    navigation: {
-        focusQuestion: '1-9',
-        editQuestion: 'q',
-        editAnswer: 'a',
-        deleteQuestion: 'd',
-        unfocus: 'Escape'
+class ShortcutsModal {
+    constructor() {
+        this.modal = document.createElement('div');
+        this.modal.className = 'shortcuts-modal-overlay';
+        this.isVisible = false;
+        this.createModal();
     }
-};
 
-const ShortcutsModal = ({ onClose, onSave }) => {
-    const [shortcuts, setShortcuts] = useState(defaultShortcuts);
-    const [hasChanges, setHasChanges] = useState(false);
-
-    useEffect(() => {
-        // Load current shortcuts from settings
-        const loadShortcuts = async () => {
-            const settings = await window.electronAPI.getSettings();
-            if (settings.shortcuts) {
-                setShortcuts({
-                    global: { ...settings.shortcuts },
-                    navigation: {
-                        focusQuestion: '1-9',
-                        editQuestion: 'q',
-                        editAnswer: 'a',
-                        deleteQuestion: 'd',
-                        unfocus: 'Escape'
-                    }
-                });
-            }
-        };
-        loadShortcuts();
-    }, []);
-
-    const handleGlobalShortcutChange = (name, value) => {
-        setShortcuts(prev => ({
-            ...prev,
-            global: {
-                ...prev.global,
-                [name]: value
-            }
-        }));
-        setHasChanges(true);
-    };
-
-    const handleNavigationShortcutChange = (name, value) => {
-        setShortcuts(prev => ({
-            ...prev,
-            navigation: {
-                ...prev.navigation,
-                [name]: value
-            }
-        }));
-        setHasChanges(true);
-    };
-
-    const handleReset = (section, key) => {
-        setShortcuts(prev => ({
-            ...prev,
-            [section]: {
-                ...prev[section],
-                [key]: defaultShortcuts[section][key]
-            }
-        }));
-        setHasChanges(true);
-    };
-
-    const handleResetAll = () => {
-        setShortcuts(defaultShortcuts);
-        setHasChanges(true);
-    };
-
-    const handleSave = async () => {
-        try {
-            await window.electronAPI.updateSettings({ shortcuts: shortcuts.global });
-            onSave();
-            onClose();
-        } catch (error) {
-            console.error('Failed to save shortcuts:', error);
-            // TODO: Show error message to user
-        }
-    };
-
-    return (
-        <div className="shortcuts-modal">
-            <div className="modal-header">
-                <h2>Keyboard Shortcuts</h2>
-                <button className="close-button" onClick={onClose}>×</button>
-            </div>
-
-            <div className="modal-content">
-                <ShortcutsList
-                    title="Global Shortcuts"
-                    shortcuts={shortcuts.global}
-                    onShortcutChange={handleGlobalShortcutChange}
-                    onReset={(key) => handleReset('global', key)}
-                />
-
-                <ShortcutsList
-                    title="In-App Navigation"
-                    shortcuts={shortcuts.navigation}
-                    onShortcutChange={handleNavigationShortcutChange}
-                    onReset={(key) => handleReset('navigation', key)}
-                />
-
-                <div className="modal-footer">
-                    <button 
-                        className="reset-all-button"
-                        onClick={handleResetAll}
-                    >
-                        Reset All to Defaults
-                    </button>
-                    <div className="action-buttons">
-                        <button 
-                            className="cancel-button"
-                            onClick={onClose}
-                        >
-                            Cancel
-                        </button>
-                        <button 
-                            className="save-button"
-                            onClick={handleSave}
-                            disabled={!hasChanges}
-                        >
-                            Save Changes
-                        </button>
+    createModal() {
+        this.modal.innerHTML = `
+            <div class="shortcuts-modal">
+                <div class="modal-header">
+                    <h2>Keyboard Shortcuts</h2>
+                    <button class="close-button" id="closeShortcutsBtn" title="Close (Esc)">×</button>
+                </div>
+                <div class="modal-content">
+                    <div class="shortcuts-section">
+                        <h3>Global Shortcuts</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys">Shift + Space</span>
+                                <span class="shortcut-description">Show/Hide App</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys">Shift + N</span>
+                                <span class="shortcut-description">Focus New Question</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys">Ctrl + Shift + E</span>
+                                <span class="shortcut-description">Export Data</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys">Ctrl + Shift + I</span>
+                                <span class="shortcut-description">Import Data</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shortcuts-section">
+                        <h3>Question List Navigation</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys">1-9</span>
+                                <span class="shortcut-description">Focus question by number</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys">Q</span>
+                                <span class="shortcut-description">Edit focused question</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys">A</span>
+                                <span class="shortcut-description">Edit focused answer</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys">D</span>
+                                <span class="shortcut-description">Delete focused question</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys">Esc</span>
+                                <span class="shortcut-description">Clear focus</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    );
-};
+        `;
 
-export default ShortcutsModal;
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        const closeBtn = this.modal.querySelector('#closeShortcutsBtn');
+        closeBtn.addEventListener('click', () => this.hide());
+
+        // Add Escape key handler
+        this.modal.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.hide();
+            }
+        });
+
+        // Close when clicking outside the modal
+        this.modal.addEventListener('click', (e) => {
+            if (e.target === this.modal) {
+                this.hide();
+            }
+        });
+    }
+
+    show() {
+        if (!this.isVisible) {
+            document.body.appendChild(this.modal);
+            this.isVisible = true;
+            // Focus the close button for keyboard accessibility
+            this.modal.querySelector('#closeShortcutsBtn').focus();
+        }
+    }
+
+    hide() {
+        if (this.isVisible) {
+            document.body.removeChild(this.modal);
+            this.isVisible = false;
+        }
+    }
+}
+
+// Export the class
+window.ShortcutsModal = ShortcutsModal;

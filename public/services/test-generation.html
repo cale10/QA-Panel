@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ollama Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #ffffff;
+        }
+        #output {
+            white-space: pre-wrap;
+            padding: 10px;
+            background: #2d2d2d;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+        .success {
+            color: #69db7c;
+        }
+    </style>
+</head>
+<body>
+    <h2>Ollama Test</h2>
+    <div id="output"></div>
+
+    <script src="OllamaService.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, type = 'normal') {
+            const line = document.createElement('div');
+            line.textContent = message;
+            line.className = type;
+            output.appendChild(line);
+        }
+
+        async function runTest() {
+            const service = new OllamaService();
+            
+            try {
+                log('Testing AI answer generation...', 'normal');
+                
+                // First check if Ollama is running
+                const isRunning = await service.isOllamaRunning();
+                log('Ollama running: ' + isRunning, isRunning ? 'success' : 'error');
+                
+                if (!isRunning) {
+                    log('Please start Ollama first', 'error');
+                    return;
+                }
+
+                // List available models
+                const models = await service.listModels();
+                log('Available models: ' + models.map(m => m.name).join(', '), 'success');
+
+                // Try generating an answer
+                const question = "What is JavaScript?";
+                log('\nTest Question: ' + question, 'normal');
+                
+                const answer = await service.generateAnswer(
+                    'llama3.2:latest',
+                    service.createPrompt('VSCode', question)
+                );
+                
+                log('\nGenerated Answer: ' + answer, 'success');
+                
+            } catch (error) {
+                log('Error during test: ' + error.message, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
+        // Run test when page loads
+        runTest();
+    </script>
+</body>
+</html>

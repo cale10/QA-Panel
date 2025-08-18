@@ -1,0 +1,300 @@
+.ai-settings {
+    padding: 1rem;
+}
+
+.ai-settings .section-group {
+    background-color: var(--background-color, #2d2e31);
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid #444;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.ai-settings .section-title {
+    color: var(--accent-color, #ffa500);
+    margin: 0 0 1.5rem 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.ai-settings .setting-group {
+    margin-bottom: 1.5rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.ai-settings .setting-group:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.ai-settings .setting-group:last-child {
+    margin-bottom: 0;
+}
+
+.ai-settings .setting-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-color, #fff);
+}
+
+.ai-settings .control-description {
+    font-size: 0.9rem;
+    color: #888;
+    margin: 0.5rem 0 0 0;
+    line-height: 1.4;
+}
+
+.ai-settings .select-control {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+    color: var(--text-color, #fff);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ai-settings .select-control:hover {
+    border-color: #666;
+    background-color: #252525;
+}
+
+.ai-settings .select-control:focus {
+    border-color: var(--accent-color, #ffa500);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.2);
+}
+
+.ai-settings .model-info {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.ai-settings .model-info .model-name {
+    color: var(--accent-color, #ffa500);
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.ai-settings .model-info .model-description {
+    color: #aaa;
+    margin-bottom: 0.25rem;
+}
+
+.ai-settings .model-info .model-resolution {
+    color: #888;
+    font-size: 0.85rem;
+    font-family: monospace;
+}
+
+.ai-settings .model-info.upcoming {
+    border: 1px dashed var(--accent-color, #ffa500);
+    background-color: rgba(255, 165, 0, 0.1);
+}
+
+.ai-settings .model-info.upcoming::before {
+    content: "Coming Soon";
+    display: inline-block;
+    padding: 2px 6px;
+    background-color: var(--accent-color, #ffa500);
+    color: #000;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.ai-settings textarea {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+    color: var(--text-color, #fff);
+    border-radius: 6px;
+    margin-top: 0.25rem;
+    font-size: 0.95rem;
+    resize: vertical;
+    min-height: 60px;
+    font-family: monospace;
+    transition: all 0.2s ease;
+}
+
+.ai-settings textarea:hover {
+    border-color: #666;
+    background-color: #252525;
+}
+
+.ai-settings textarea:focus {
+    border-color: var(--accent-color, #ffa500);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.2);
+}
+
+.ai-settings .error-message {
+    background-color: #3a1c1c;
+    border: 1px solid #ff4444;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    color: #ff4444;
+}
+
+.ai-settings .error-message h3 {
+    margin: 0 0 0.5rem 0;
+    color: #ff6666;
+}
+
+.ai-settings .error-message p {
+    margin: 0;
+    line-height: 1.5;
+}
+
+.ai-settings .error-message ⚠️ {
+    margin-right: 0.5rem;
+}
+
+/* Toggle Switch */
+.ai-settings .toggle-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    padding-left: 56px;
+    user-select: none;
+}
+
+.ai-settings .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.ai-settings .toggle-slider {
+    position: absolute;
+    left: 0;
+    width: 44px;
+    height: 24px;
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+    transition: all 0.3s ease;
+    border-radius: 24px;
+}
+
+.ai-settings .toggle-slider:before {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #666;
+    transition: all 0.3s ease;
+    border-radius: 50%;
+}
+
+.ai-settings .toggle-switch input:checked + .toggle-slider {
+    background-color: rgba(255, 165, 0, 0.2);
+    border-color: var(--accent-color, #ffa500);
+}
+
+.ai-settings .toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+    background-color: var(--accent-color, #ffa500);
+}
+
+.ai-settings .toggle-switch:hover .toggle-slider {
+    border-color: #666;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+.ai-settings .toggle-switch input:checked:hover + .toggle-slider {
+    border-color: #ffb52e;
+    background-color: rgba(255, 165, 0, 0.25);
+}
+
+.ai-settings .toggle-switch input:focus + .toggle-slider {
+    box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.2);
+}
+
+.ai-settings .toggle-label {
+    color: var(--text-color, #fff);
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: color 0.2s ease;
+}
+
+.ai-settings .toggle-switch:hover .toggle-label {
+    color: var(--accent-color, #ffa500);
+}
+
+/* Range input styling */
+.ai-settings input[type="range"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    background: #1e1e1e;
+    border-radius: 4px;
+    margin: 10px 0;
+    cursor: pointer;
+}
+
+.ai-settings input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--accent-color, #ffa500);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.ai-settings input[type="range"]::-webkit-slider-thumb:hover {
+    background: #ffb52e;
+    transform: scale(1.1);
+}
+
+/* Template editor */
+.ai-settings .template-editor {
+    background-color: #1e1e1e;
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    border: 1px solid #444;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.ai-settings .template-editor.hidden {
+    display: none;
+    opacity: 0;
+}
+
+.ai-settings .template-editor textarea {
+    background-color: #2d2e31;
+    border: 1px solid #444;
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.ai-settings .template-editor label {
+    color: var(--accent-color, #ffa500);
+    font-weight: 600;
+    margin-top: 1rem;
+    display: block;
+}
+
+.ai-settings .template-editor label:first-child {
+    margin-top: 0;
+}

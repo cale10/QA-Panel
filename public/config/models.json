@@ -1,0 +1,49 @@
+{
+  "regularModels": [
+    {
+      "name": "llama2",
+      "displayName": "Llama 2",
+      "description": "General purpose model for text generation"
+    },
+    {
+      "name": "codellama",
+      "displayName": "Code Llama",
+      "description": "Specialized for code and technical content"
+    },
+    {
+      "name": "mistral",
+      "displayName": "Mistral",
+      "description": "High-performance general purpose model"
+    }
+  ],
+  "visionModels": [
+    {
+      "name": "llava",
+      "displayName": "LLaVA",
+      "description": "Vision-language model for image understanding",
+      "maxResolution": "336x336"
+    },
+    {
+      "name": "bakllava",
+      "displayName": "Bakllava",
+      "description": "Enhanced vision model with better resolution",
+      "maxResolution": "1024x1024"
+    },
+    {
+      "name": "minicpm-v",
+      "displayName": "MiniCPM-V",
+      "description": "Current vision model",
+      "maxResolution": "2048x2048"
+    },
+    {
+      "name": "llama-3.2-vision",
+      "displayName": "Llama 3.2 Vision",
+      "description": "Upcoming vision model (not yet available)",
+      "maxResolution": "4096x4096",
+      "status": "upcoming"
+    }
+  ],
+  "defaultRegularModel": "llama2",
+  "defaultVisionModel": "minicpm-v",
+  "upcomingModels": ["llama-3.2-vision"]
+}
