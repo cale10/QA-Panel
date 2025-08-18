@@ -19,10 +19,11 @@ class SettingsModal {
                     <button class="close-button" id="closeSettingsBtn" aria-label="Close settings">×</button>
                 </div>
 
-                <div class="settings-tabs">
-                    <button class="tab-button active" data-tab="appearance">Appearance</button>
-                    <button class="tab-button" data-tab="shortcuts">Keyboard Shortcuts</button>
-                    <button class="tab-button" data-tab="ai">AI</button>
+                <div class="settings-tabs" role="tablist" aria-label="Settings sections">
+                    <button class="tab-button active" role="tab" aria-selected="true" aria-controls="appearancePanel" id="tab-appearance" data-tab="appearance">Appearance</button>
+                    <button class="tab-button" role="tab" aria-selected="false" aria-controls="aiPanel" id="tab-ai" data-tab="ai">AI</button>
+                    <button class="tab-button" role="tab" aria-selected="false" aria-controls="shortcutsPanel" id="tab-shortcuts" data-tab="shortcuts">Keyboard Shortcuts</button>
+                </div>
                 </div>
 
                 <div class="settings-content">
@@ -56,6 +57,9 @@ class SettingsModal {
                             <label>Text Color</label>
                             <input type="color" id="textColorInput">
                         </div>
+
+                        <div class="tab-panel" id="aiPanel" role="tabpanel" aria-labelledby="tab-ai" tabindex="0"></div>
+
                     </div>
 
                     <div class="tab-panel" id="shortcutsPanel">
@@ -246,13 +250,39 @@ class SettingsModal {
         const panels = this.modal.querySelectorAll('.tab-panel');
 
         tabs.forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.tab === tabName);
+            const isActive = tab.dataset.tab === tabName;
+            tab.classList.toggle('active', isActive);
+            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            tab.tabIndex = isActive ? 0 : -1;
         });
 
         panels.forEach(panel => {
-            panel.classList.toggle('active', panel.id === `${tabName}Panel`);
+            const isActive = panel.id === `${tabName}Panel`;
+            panel.classList.toggle('active', isActive);
+            panel.hidden = !isActive;
         });
+
+        // Lazy mount AI settings when its tab is opened
+        if (tabName === 'ai') {
+            this.mountAISettings();
+        }
     }
+
+    async mountAISettings() {
+        if (this.aiMounted) return;
+        try {
+            const aiPanel = this.modal.querySelector('#aiPanel');
+            if (!aiPanel) return;
+            const aiSettings = new AISettings();
+            const el = await aiSettings.getElement();
+            aiPanel.innerHTML = '';
+            aiPanel.appendChild(el);
+            this.aiMounted = true;
+        } catch (error) {
+            console.error('Failed to mount AI settings:', error);
+        }
+    }
+
 
     async show() {
         if (!this.isVisible) {
