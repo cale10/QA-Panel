@@ -222,17 +222,35 @@
         <div id="lastUsedApp" role="status" aria-live="polite">Last Used App: Loading...</div>
         <form id="questionForm" aria-labelledby="formHeading">
             <label id="formHeading" for="questionInput">Question</label>
-            <input type="text" id="questionInput" placeholder="Enter your question" required>
+            <input type="text" id="questionInput" placeholder="Enter your question" required aria-label="Question">
             <label for="answerInput">Answer</label>
-            <textarea id="answerInput" placeholder="Enter the answer (optional)" rows="3"></textarea>
+            <textarea id="answerInput" placeholder="Enter the answer (optional)" rows="3" aria-label="Answer"></textarea>
             <div class="answer-actions">
                 <button type="button" id="generateBtn" title="Generate an answer using AI (non-blocking)" aria-describedby="generateStatus">✨ Generate Answer</button>
+                    <button type="button" id="visionGenBtn" title="Capture screenshot and ask vision model" aria-label="Generate using vision model">🖼️ Vision Answer</button>
+
                 <button type="button" id="cancelGenBtn" class="secondary" hidden>Cancel</button>
                 <span id="spinner" class="spinner" aria-hidden="true" hidden></span>
+                <label class="toggle-switch" style="margin-left:auto;">
+                    <input type="checkbox" id="aiOptInToggle">
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">Use AI</span>
+                </label>
                 <span id="generateStatus" role="status" aria-live="polite" class="status-text"></span>
             </div>
             <button type="submit" id="submitBtn">Add Question</button>
         </form>
+
+        <!-- SCRUM-22/34: Results panel for Ollama responses -->
+        <section id="aiResultsPanel" aria-labelledby="aiResultsTitle" style="display:none; margin-top:12px;">
+            <h3 id="aiResultsTitle" style="margin:8px 0; color:#ffa500;">AI Result</h3>
+            <div id="aiError" role="alert" style="display:none; color:#ff6b6b; margin-bottom:6px;"></div>
+            <pre id="aiResultText" tabindex="0" aria-live="polite"></pre>
+            <div class="question-actions" style="justify-content:flex-start; gap:8px;">
+                <button type="button" id="copyToAnswerBtn" title="Copy result into the Answer field">Copy to Answer</button>
+                <button type="button" id="clearResultBtn" class="secondary" title="Clear the AI result">Clear</button>
+            </div>
+        </section>
         <h2 id="qaHeading">Questions and Answers:</h2>
         <ul id="questionList" role="list" aria-labelledby="qaHeading"></ul>
 
@@ -266,6 +284,10 @@
             </div>
         </div>
     </div>
+    <script src="services/OllamaService.js"></script>
+    <script src="services/ThemeService.js"></script>
+    <script src="components/settings/AISettings.js"></script>
+    <script src="components/settings/ThemeSettings.js"></script>
     <script src="components/SettingsModal.js"></script>
     <script src="renderer.js"></script>
 </body>

@@ -27,7 +27,10 @@ class OllamaService {
     async isOllamaRunning() {
         try {
             const response = await fetch('http://localhost:11434/api/version');
-            return response.ok;
+            if (!response.ok) return false;
+            const { version } = await response.json();
+            this.serverVersion = (version || '').replace(/^v/i, '');
+            return true;
         } catch (error) {
             return false;
         }
@@ -36,14 +39,21 @@ class OllamaService {
     async listModels() {
         try {
             const response = await fetch('http://localhost:11434/api/tags');
+            if (!response.ok) throw new Error(`tags ${response.status}`);
             const data = await response.json();
-            return data.models.map(model => ({
+            const models = (data.models || []).map(model => ({
                 name: model.name,
+                size: model.size,
+                modifiedAt: model.modified_at,
+                digest: model.digest,
+                parameters: model.parameters,
                 ...this.modelInfo[model.name],
                 displayName: this.modelInfo[model.name]?.displayName || model.name,
                 description: this.modelInfo[model.name]?.description || (this.isVisionModel(model.name) ? 'Vision-capable model' : 'General purpose model'),
-                maxResolution: this.modelInfo[model.name]?.maxResolution || (this.isVisionModel(model.name) ? '1024x1024' : null)
+                maxResolution: this.modelInfo[model.name]?.maxResolution || (this.isVisionModel(model.name) ? '1024x1024' : null),
+                type: this.isVisionModel(model.name) ? 'vision' : 'text'
             }));
+            return models;
         } catch (error) {
             console.error('Error listing models:', error);
             return [];
@@ -52,7 +62,7 @@ class OllamaService {
 
     isVisionModel(modelName) {
         const lowerName = modelName.toLowerCase();
-        return lowerName.includes('llava') || 
+        return lowerName.includes('llava') ||
                lowerName.includes('bakllava') ||
                lowerName.includes('vision') ||
                lowerName.includes('minicpm-v');
@@ -84,36 +94,84 @@ class OllamaService {
         return prompt;
     }
 
-    async generateAnswer(model, prompt, imageData = null) {
+    async generateAnswer(model, prompt, imageData = null, opts = {}) {
         try {
-            const response = await fetch('http://localhost:11434/api/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
+            const endpoint = 'http://localhost:11434/api/generate';
+            const body = {
+                model,
+                prompt,
+                stream: false,
+                options: {
+                    temperature: 0.7,
+                    ...opts.options
                 },
-                body: JSON.stringify({
-                    model,
-                    prompt,
-                    stream: false,
-                    options: {
-                        temperature: 0.7
-                    },
-                    ...(imageData && {
-                        images: [imageData]
-                    })
-                })
+                ...(imageData && { images: [imageData] })
+            };
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
             });
 
             if (!response.ok) {
-                throw new Error('Failed to generate answer');
+                const msg = await response.text();
+                throw new Error(`Failed to generate answer: ${response.status} ${msg}`);
             }
 
             const data = await response.json();
-            return data.response;
+            return data.response || data.message?.content?.map(p => p.text).join('') || '';
         } catch (error) {
             console.error('Error generating answer:', error);
             throw error;
         }
+    }
+
+    async chat(model, messages = [], stream = false) {
+        const response = await fetch('http://localhost:11434/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model, messages, stream })
+        });
+        if (!response.ok) throw new Error(`chat ${response.status}`);
+        return response.json();
+    }
+
+    async getModelInfo(model) {
+        try {
+            const res = await fetch('http://localhost:11434/api/show', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: model })
+            });
+            if (!res.ok) throw new Error(`show ${res.status}`);
+            return res.json();
+        } catch (e) {
+            return { name: model, version: '0.0.0' };
+        }
+    }
+
+    async catalogModels() {
+        const models = await this.listModels();
+        const vision = models.filter(m => m.type === 'vision');
+        const text = models.filter(m => m.type === 'text');
+        return { models, vision, text, defaults: this.getSuggestedDefaults({ vision, text }) };
+    }
+
+    getSuggestedDefaults({ vision = [], text = [] } = {}) {
+        const pick = (arr, priority) => {
+            for (const name of priority) {
+                const found = arr.find(m => m.name.startsWith(name));
+                if (found) return found.name;
+            }
+            return arr[0]?.name || null;
+        };
+        const textPriority = ['llama3.2', 'mistral', 'llama2', 'codellama'];
+        const visionPriority = ['minicpm-v', 'llava', 'bakllava'];
+        return {
+            defaultRegularModel: pick(text, textPriority),
+            defaultVisionModel: pick(vision, visionPriority)
+        };
     }
 }
 
