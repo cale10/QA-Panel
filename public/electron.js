@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, dialog, screen, desktopCapturer, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, dialog, screen, desktopCapturer } = require('electron');
 const path = require('path');
 const url = require('url');
 const isDev = require('electron-is-dev');
@@ -31,22 +31,15 @@ let settings = {
         importData: 'Ctrl+Shift+I'
     },
     ai: {
-        // General provider and connection
-        provider: 'ollama',
-        baseUrl: 'http://127.0.0.1:11434',
-        // Behavior and defaults
         enabled: false,
-        autoAnswer: false,
-        requireManual: true,
-        temperature: 0.7,
-        streamResponse: true,
-        // Models
         model: 'llama2',
         visionModel: 'llava:latest',
+        autoAnswer: false,
+        temperature: 0.7,
         useVision: false,
-        // Prompting and memory (existing fields preserved)
+        streamResponse: true,
         promptTemplate: {
-            mode: 'basic',
+            mode: 'basic', // 'simple', 'basic', or 'advanced'
             templates: {
                 simple: 'Question: {question}\n\nAnswer:',
                 basic: `System: You are an expert in {app_name} and software applications.
@@ -64,7 +57,7 @@ Instructions:
 - Reference previous answers if they apply
 - {/if}Provide a clear and concise answer
 - Focus on practical solutions`,
-                advanced: ''
+                advanced: '' // User customizes through systemPrompt and customInstructions
             },
             customInstructions: [],
             systemPrompt: 'You are an expert in {app_name} and software applications.'
@@ -105,42 +98,6 @@ async function captureLastUsedAppScreen() {
         return null;
     }
 }
-
-// Consent dialog for screenshots
-async function requestScreenshotConsent() {
-    const result = await dialog.showMessageBox(mainWindow, {
-        type: 'question',
-        buttons: ['Allow', 'Deny'],
-        defaultId: 0,
-        cancelId: 1,
-        title: 'Allow screenshot capture?',
-        message: 'Do you consent to capture a screenshot of your current screen to send as context to the vision model?',
-        detail: 'The image will be processed locally and sent to your configured vision model (e.g., MiniCPM-V) via Ollama. Sensitive content may be visible in the capture.'
-    });
-    return result.response === 0;
-}
-
-function isVisionModel(modelName = '') {
-    const n = String(modelName || '').toLowerCase();
-    return n.includes('llava') || n.includes('bakllava') || n.includes('minicpm-v') || n.includes('vision');
-}
-
-// Preprocess image: resize/compress to max 1024x1024 and return base64 without prefix
-function preprocessImageBase64(base64Str, maxSize = 1024, quality = 0.8) {
-    try {
-        const img = nativeImage.createFromDataURL(`data:image/png;base64,${base64Str}`);
-        const size = img.getSize();
-        const scale = Math.min(1, maxSize / Math.max(size.width, size.height));
-        const resized = scale < 1 ? img.resize({ width: Math.round(size.width * scale), height: Math.round(size.height * scale), quality: 'best' }) : img;
-        // compress to JPEG to reduce payload size
-        const jpeg = resized.toJPEG(Math.round(quality * 100));
-        return Buffer.from(jpeg).toString('base64');
-    } catch (e) {
-        log.error('Failed to preprocess image', e);
-        return base64Str;
-    }
-}
-
 
 // Ollama API handlers
 async function ollamaIsRunning() {
@@ -188,7 +145,7 @@ async function ollamaGenerateAnswer(model, prompt, imageData = null) {
             }
         };
 
-        if (imageData && isVisionModel(model)) {
+        if (imageData && model.toLowerCase().includes('llava')) {
             body.images = [imageData];
         }
 
@@ -425,10 +382,10 @@ ipcMain.handle('get-questions', () => {
 });
 
 ipcMain.handle('add-question', (event, question, answer) => {
-    qaList.push({
-        id: Date.now(),
-        question,
-        answer,
+    qaList.push({ 
+        id: Date.now(), 
+        question, 
+        answer, 
         app: settings.lastUsedApp,
         isAIGenerated: answer && settings.ai?.enabled,
         referencesContext: false
@@ -440,9 +397,9 @@ ipcMain.handle('add-question', (event, question, answer) => {
 ipcMain.handle('update-question', (event, id, question, answer, isAIGenerated = false) => {
     const index = qaList.findIndex(q => q.id === id);
     if (index !== -1) {
-        qaList[index] = {
-            ...qaList[index],
-            question,
+        qaList[index] = { 
+            ...qaList[index], 
+            question, 
             answer,
             isAIGenerated,
             referencesContext: qaList[index].referencesContext
@@ -473,20 +430,9 @@ ipcMain.handle('get-last-used-app', () => {
     return settings.lastUsedApp;
 });
 
-
-// Secure screenshot with consent and preprocessing
-ipcMain.handle('capture-screen-with-consent', async () => {
-    const allowed = await requestScreenshotConsent();
-    if (!allowed) return { allowed: false, image: null };
-    const raw = await captureLastUsedAppScreen();
-    if (!raw) return { allowed: true, image: null };
-    const processed = preprocessImageBase64(raw, 1024, 0.8);
-    return { allowed: true, image: processed };
-});
-
 ipcMain.handle('get-contextual-questions', (event, currentQuestion) => {
     const appQuestions = qaList.filter(qa => qa.app === settings.lastUsedApp);
-
+    
     if (!settings.ai?.contextMemory?.enabled || appQuestions.length === 0) {
         return [];
     }
@@ -509,96 +455,6 @@ ipcMain.handle('import-data', (event, filePath) => {
     saveData();
     setupGlobalShortcuts();
     return { qaList, settings };
-
-// --- Ollama helpers and IPC ---
-function getOllamaUrl() {
-    return (settings.ai && settings.ai.baseUrl) ? settings.ai.baseUrl.replace(/\/$/, '') : 'http://127.0.0.1:11434';
-}
-
-async function ollamaRequest(pathname, body) {
-    const urlStr = `${getOllamaUrl()}${pathname}`;
-    log.info('Ollama request', urlStr);
-    return new Promise((resolve, reject) => {
-        try {
-            const https = urlStr.startsWith('https:');
-            const httpModule = require(https ? 'https' : 'http');
-            const data = JSON.stringify(body || {});
-            const urlObj = new URL(urlStr);
-            const req = httpModule.request({
-                hostname: urlObj.hostname,
-                port: urlObj.port,
-                path: urlObj.pathname,
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) }
-            }, (res) => {
-                let chunks = '';
-                res.setEncoding('utf8');
-                res.on('data', (d) => chunks += d);
-                res.on('end', () => {
-                    try { resolve(JSON.parse(chunks)); } catch (e) { resolve({ raw: chunks }); }
-                });
-            });
-            req.on('error', reject);
-            req.write(data);
-            req.end();
-        } catch (e) { reject(e); }
-    });
-}
-
-ipcMain.handle('ollama-list-models', async () => {
-    // GET /api/tags is typical, but we use POST helper; fallback to http(s)
-    try {
-        const base = getOllamaUrl();
-        const https = base.startsWith('https:');
-        const httpModule = require(https ? 'https' : 'http');
-        const urlObj = new URL(base + '/api/tags');
-        return await new Promise((resolve, reject) => {
-            const req = httpModule.request({ hostname: urlObj.hostname, port: urlObj.port, path: urlObj.pathname, method: 'GET' }, (res) => {
-                let body = '';
-                res.on('data', (c) => body += c);
-                res.on('end', () => { try { resolve(JSON.parse(body)); } catch { resolve({ raw: body }); } });
-            });
-            req.on('error', reject);
-            req.end();
-        });
-    } catch (e) {
-        log.error('ollama-list-models error', e);
-        throw e;
-    }
-});
-
-ipcMain.handle('ollama-generate', async (event, { prompt, options }) => {
-    if (settings.ai?.requireManual && !options?.manual) {
-        return { skipped: true, reason: 'Manual generate required' };
-    }
-    const model = options?.model || settings.ai?.model;
-    const temperature = options?.temperature ?? settings.ai?.temperature ?? 0.7;
-    if (!model) return { error: 'No model selected' };
-    try {
-        const resp = await ollamaRequest('/api/generate', { model, prompt, options: { temperature } });
-        return resp;
-    } catch (e) {
-        log.error('ollama-generate error', e);
-        return { error: String(e) };
-    }
-});
-
-ipcMain.handle('ollama-chat', async (event, { messages, options }) => {
-    if (settings.ai?.requireManual && !options?.manual) {
-        return { skipped: true, reason: 'Manual generate required' };
-    }
-    const model = options?.model || settings.ai?.model;
-    const temperature = options?.temperature ?? settings.ai?.temperature ?? 0.7;
-    if (!model) return { error: 'No model selected' };
-    try {
-        const resp = await ollamaRequest('/api/chat', { model, messages, options: { temperature } });
-        return resp;
-    } catch (e) {
-        log.error('ollama-chat error', e);
-        return { error: String(e) };
-    }
-});
-
 });
 
 ipcMain.handle('show-save-dialog', (event, options) => {
@@ -628,5 +484,5 @@ ipcMain.handle('show-window', () => {
 // Ollama IPC handlers
 ipcMain.handle('ollama-is-running', ollamaIsRunning);
 ipcMain.handle('ollama-list-models', ollamaListModels);
-ipcMain.handle('ollama-generate-answer', (event, model, prompt, imageData) =>
+ipcMain.handle('ollama-generate-answer', (event, model, prompt, imageData) => 
     ollamaGenerateAnswer(model, prompt, imageData));
