@@ -34,6 +34,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let settingsModal = null;
     let lastFocusedBeforeSettings = null;
 
+    // IME composition state for safe Enter handling (SCRUM-39)
+    let isComposing = false;
+
+    // Track IME composition on inputs
+    questionInput.addEventListener('compositionstart', () => { isComposing = true; });
+    questionInput.addEventListener('compositionend', () => { isComposing = false; });
+    answerInput.addEventListener('compositionstart', () => { isComposing = true; });
+    answerInput.addEventListener('compositionend', () => { isComposing = false; });
+
+    // Prevent form submission while composing in the question field
+    questionInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && (isComposing || e.isComposing)) {
+            e.preventDefault();
+        }
+    });
+
     // Shortcuts overlay elements
     const shortcutsOverlay = document.getElementById('shortcutsOverlay');
     const closeShortcutsBtn = document.getElementById('closeShortcutsBtn');

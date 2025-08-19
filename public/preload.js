@@ -35,14 +35,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Event cleanup
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
 
-    // Ollama
-    ollamaListModels: () => ipcRenderer.invoke('ollama-list-models'),
+    // Ollama (extended)
     ollamaGenerate: (prompt, options) => ipcRenderer.invoke('ollama-generate', { prompt, options }),
     ollamaChat: (messages, options) => ipcRenderer.invoke('ollama-chat', { messages, options }),
 
     // Screenshots & Vision
     captureScreenWithConsent: () => ipcRenderer.invoke('capture-screen-with-consent'),
-    ollamaIsRunning: () => ipcRenderer.invoke('ollama-is-running'),
-    ollamaGenerateAnswer: (model, prompt, imageData) => ipcRenderer.invoke('ollama-generate-answer', model, prompt, imageData),
     onStreamResponse: (callback) => ipcRenderer.on('stream-response', (event, chunk) => callback(chunk)),
 });
