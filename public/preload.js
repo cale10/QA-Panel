@@ -42,4 +42,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Screenshots & Vision
     captureScreenWithConsent: () => ipcRenderer.invoke('capture-screen-with-consent'),
     onStreamResponse: (callback) => ipcRenderer.on('stream-response', (event, chunk) => callback(chunk)),
+
+        // System info for compatibility checks
+        getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
+        getGPUInfo: () => ipcRenderer.invoke('get-gpu-info'),
+        getDiskSpace: () => ipcRenderer.invoke('get-disk-space'),
 });

@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isEditing = false;
     let settingsModal = null;
     let lastFocusedBeforeSettings = null;
+    let abortGen = null;
 
     // IME composition state for safe Enter handling (SCRUM-39)
     let isComposing = false;
@@ -175,18 +176,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!settingsModal) {
             settingsModal = new SettingsModal();
         }
+        // Patch focus-restore on hide only once per instance
+        if (!settingsModal._focusRestorePatched) {
+            const originalHide = settingsModal.hide.bind(settingsModal);
+            settingsModal.hide = () => {
+                originalHide();
+                if (lastFocusedBeforeSettings && typeof lastFocusedBeforeSettings.focus === 'function') {
+                    lastFocusedBeforeSettings.focus();
+                    announce('Returned focus to previous element');
+                }
+            };
+            settingsModal._focusRestorePatched = true;
+        }
         settingsModal.show();
         // Announce opening
         announce('Settings opened');
-        // When modal closes, return focus
-        const originalHide = settingsModal.hide.bind(settingsModal);
-        settingsModal.hide = () => {
-            originalHide();
-            if (lastFocusedBeforeSettings && typeof lastFocusedBeforeSettings.focus === 'function') {
-                lastFocusedBeforeSettings.focus();
-                announce('Returned focus to previous element');
-            }
-        };
     });
 
 
@@ -195,9 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    cancelGenBtn.addEventListener('click', () => {
-        if (abortGen) abortGen();
-    });
+
     // Vision generation
     const visionGenBtn = document.getElementById('visionGenBtn');
     if (visionGenBtn) {
@@ -297,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 importData: 'Ctrl+Shift+I'
             };
             const currentSettings = await window.electronAPI.getSettings();
-            await window.electronAPI.updateSettings({ shortcuts: defaultShortcuts });
+            await window.electronAPI.updateSettings({ ...currentSettings, shortcuts: defaultShortcuts });
             hideShortcutsOverlay();
         });
     }

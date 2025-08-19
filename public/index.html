@@ -293,6 +293,19 @@
     <script src="components/settings/AISettings.js"></script>
     <script src="components/settings/ThemeSettings.js"></script>
     <script src="components/SettingsModal.js"></script>
+    <script src="components/custom/ModelCompatibilityPanel.js"></script>
+    <script src="services/ai/ModelCompatibilityService.js"></script>
+    <script>
+      // Initialize global Ollama service and wire compatibility notifications
+      try {
+        window.ollamaService = window.ollamaService || new OllamaService();
+      } catch (e) { console.error('Failed to init OllamaService', e); }
+      try {
+        window.modelCompatibilityService?.addListener(ev => {
+          try { window.modelCompatibilityPanel?.showCompatibilityNotification?.(ev); } catch (err) { console.error(err); }
+        });
+      } catch (e) { console.error('Failed to connect compatibility panel', e); }
+    </script>
     <script src="renderer.js"></script>
 </body>
 </html>

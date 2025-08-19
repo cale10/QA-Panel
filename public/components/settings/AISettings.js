@@ -238,6 +238,10 @@ class AISettings {
                 });
             });
 
+                // Trigger compatibility check (non-blocking)
+                try { window.modelCompatibilityService?.checkCompatibility(e.target.value, { detailed: false }); } catch {}
+
+
             visionModelSelect.addEventListener('change', async (e) => {
                 const selectedModel = visionModels.find(m => m.name === e.target.value);
                 const modelInfo = this.element.querySelector('#visionModel').closest('.setting-group').querySelector('.model-info');
@@ -252,6 +256,10 @@ class AISettings {
                     ...await window.electronAPI.getSettings(),
                     ai: {
                         ...settings.ai,
+
+                // Trigger compatibility check for vision model (non-blocking)
+                try { window.modelCompatibilityService?.checkCompatibility(e.target.value, { detailed: false }); } catch {}
+
                         visionModel: e.target.value
                     }
                 });

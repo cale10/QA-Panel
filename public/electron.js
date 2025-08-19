@@ -6,6 +6,8 @@ const log = require('electron-log');
 const fs = require('fs');
 const activeWin = require('active-win');
 const fetch = require('node-fetch');
+const os = require('os');
+const { execSync } = require('child_process');
 
 log.transports.file.level = 'info';
 log.transports.console.level = 'info';
@@ -612,6 +614,68 @@ ipcMain.handle('show-open-dialog', (event, options) => {
 // Screen capture handler
 ipcMain.handle('capture-screen', async () => {
     return await captureLastUsedAppScreen();
+});
+
+// System info handlers for compatibility checks
+ipcMain.handle('get-system-info', async () => {
+    try {
+        return {
+            os: os.type(),
+            arch: os.arch(),
+            cpuCores: os.cpus()?.length || 0,
+            totalMemory: Math.round(os.totalmem() / (1024 ** 3)) // GB
+        };
+    } catch (e) {
+        log.error('get-system-info error', e);
+        return { os: process.platform, arch: process.arch, cpuCores: 0, totalMemory: 0 };
+    }
+});
+
+ipcMain.handle('get-gpu-info', async () => {
+    try {
+        // Electron 28+: app.getGPUInfo('basic'|'complete') returns a Promise
+        const info = await app.getGPUInfo('basic');
+        const device = (info?.gpuDevice && info.gpuDevice[0]) || {};
+        return {
+            model: device.deviceString || device.driverVendor || device.vendor || 'Unknown',
+            memory: device.vram || device.vramMB || null
+        };
+    } catch (e) {
+        log.error('get-gpu-info error', e);
+        return { model: 'Unknown', memory: null };
+    }
+});
+
+ipcMain.handle('get-disk-space', async () => {
+    try {
+        // Best-effort cross-platform check
+        let freeGB = null;
+        if (process.platform === 'win32') {
+            try {
+                const out = execSync('wmic logicaldisk where "DeviceID=\"C:\\\\\"" get FreeSpace /value', { encoding: 'utf8' });
+                const match = out.match(/FreeSpace=(\d+)/);
+                if (match) freeGB = Math.round(parseInt(match[1], 10) / (1024 ** 3));
+            } catch {}
+        } else {
+            try {
+                const out = execSync('df -kP /', { encoding: 'utf8' });
+                const lines = out.trim().split(/\r?\n/);
+                if (lines.length > 1) {
+                    const parts = lines[1].split(/\s+/);
+                    const availableKB = parseInt(parts[3], 10);
+                    if (!isNaN(availableKB)) freeGB = Math.round(availableKB / (1024 ** 2));
+                }
+            } catch {}
+        }
+        if (freeGB == null) {
+            // Fallback to memory as a rough proxy to avoid false negatives
+            freeGB = Math.round(os.freemem() / (1024 ** 3));
+        }
+        return { free: freeGB };
+    } catch (e) {
+        log.error('get-disk-space error', e);
+        return { free: 0 };
+    }
 });
 
 // Window control handlers
