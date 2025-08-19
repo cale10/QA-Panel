@@ -12,7 +12,8 @@
     "check:ollama": "node public/services/ollama-endpoint-check.js",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
-    "typecheck": "node scripts/typecheck.js"
+    "typecheck": "node scripts/typecheck.js",
+    "dev:proxy": "node scripts/dev-server.js"
   },
   "author": "",
   "license": "ISC",
