@@ -36,14 +36,14 @@ class AISettings {
             // If Ollama is not running or no models found, use default models
             if (!isOllamaRunning || models.length === 0) {
                 if (!regularModels.find(m => m.name === 'llama2')) {
-                    regularModels.push({
+                    regularModels.push({ 
                         name: 'llama2',
                         displayName: 'Llama 2',
                         description: 'General purpose model optimized for dialogue and text generation'
                     });
                 }
                 if (!visionModels.find(m => m.name === 'minicpm-v')) {
-                    visionModels.push({
+                    visionModels.push({ 
                         name: 'minicpm-v',
                         displayName: 'MiniCPM Vision',
                         description: 'Current vision model',
@@ -60,13 +60,13 @@ class AISettings {
                             <p>⚠️ Ollama is not running. Please start Ollama to use AI features.</p>
                         </div>
                     ` : ''}
-                    <div class="setting-group" role="group" aria-labelledby="aiEnabledLabel">
-                        <label class="toggle-switch" id="aiEnabledLabel">
-                            <input type="checkbox" id="aiEnabled" ${settings.ai?.enabled ? 'checked' : ''} aria-describedby="aiEnabledDesc">
-                            <span class="toggle-slider" aria-hidden="true"></span>
+                    <div class="setting-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="aiEnabled" ${settings.ai?.enabled ? 'checked' : ''}>
+                            <span class="toggle-slider"></span>
                             <span class="toggle-label">AI Features</span>
                         </label>
-                        <p id="aiEnabledDesc" class="control-description">Use AI to automatically generate answers</p>
+                        <p class="control-description">Use AI to automatically generate answers</p>
                     </div>
 
                     <div class="setting-group">
@@ -198,7 +198,7 @@ class AISettings {
             const templateEditor = this.element.querySelector('.template-editor');
             const aiModelSelect = this.element.querySelector('#aiModel');
             const visionModelSelect = this.element.querySelector('#visionModel');
-
+            
             temperatureInput.addEventListener('input', (e) => {
                 temperatureValue.textContent = e.target.value;
             });
@@ -258,37 +258,6 @@ class AISettings {
             });
 
             // Save settings when other inputs change
-
-                // Basic validation for AI settings
-                const formControls = this.element.querySelectorAll('#aiEnabled, #aiModel, #temperature');
-                const validate = () => {
-                    const aiEnabled = this.element.querySelector('#aiEnabled');
-                    const aiModel = this.element.querySelector('#aiModel');
-                    const temperature = this.element.querySelector('#temperature');
-                    let valid = true;
-                    if (aiEnabled?.checked) {
-                        if (!aiModel?.value) {
-                            aiModel?.setAttribute('aria-invalid', 'true');
-                            valid = false;
-                        } else {
-                            aiModel?.removeAttribute('aria-invalid');
-                        }
-                        const temp = parseFloat(temperature?.value || '0.7');
-                        if (isNaN(temp) || temp < 0 || temp > 1) {
-                            temperature?.setAttribute('aria-invalid', 'true');
-                            valid = false;
-                        } else {
-                            temperature?.removeAttribute('aria-invalid');
-                        }
-                    } else {
-                        aiModel?.removeAttribute('aria-invalid');
-                        temperature?.removeAttribute('aria-invalid');
-                    }
-                    return valid;
-                };
-                formControls.forEach(el => el.addEventListener('change', validate));
-                validate();
-
             this.element.querySelectorAll('input[type="checkbox"], input[type="range"], textarea').forEach(input => {
                 input.addEventListener('change', async () => {
                     const currentSettings = await window.electronAPI.getSettings();
