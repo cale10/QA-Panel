@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QA-Panel</title>
+    <link rel="stylesheet" href="styles/theme.css">
+    <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/settings.css">
     <link rel="stylesheet" href="styles/shortcuts.css">
     <style>
@@ -224,7 +226,7 @@
             <label id="formHeading" for="questionInput">Question</label>
             <input type="text" id="questionInput" placeholder="Enter your question" required aria-label="Question">
             <label for="answerInput">Answer</label>
-            <textarea id="answerInput" placeholder="Enter the answer (optional)" rows="3" aria-label="Answer"></textarea>
+            <textarea id="answerInput" placeholder="Enter the answer (optional). Press Enter to submit; Shift+Enter for a new line." rows="3" aria-label="Answer"></textarea>
             <div class="answer-actions">
                 <button type="button" id="generateBtn" title="Generate an answer using AI (non-blocking)" aria-describedby="generateStatus">✨ Generate Answer</button>
                     <button type="button" id="visionGenBtn" title="Capture screenshot and ask vision model" aria-label="Generate using vision model">🖼️ Vision Answer</button>
@@ -286,6 +288,8 @@
     </div>
     <script src="services/OllamaService.js"></script>
     <script src="services/ThemeService.js"></script>
+    <script src="services/EventBusService.js"></script>
+    <script src="services/GlobalStateService.js"></script>
     <script src="components/settings/AISettings.js"></script>
     <script src="components/settings/ThemeSettings.js"></script>
     <script src="components/SettingsModal.js"></script>

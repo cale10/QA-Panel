@@ -92,6 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch {}
     })();
     aiOptInToggle?.addEventListener('change', async (e) => {
+        // Sync with global state and publish event [SCRUM-44]
+        try { window.eventBusService?.publish('ai_state_changed', !!e.target.checked); } catch {}
+        window.globalStateService?.setState?.({ aiEnabled: !!e.target.checked });
         try {
             const s = await window.electronAPI.getSettings();
             await window.electronAPI.updateSettings({ ...s, ai: { ...(s.ai||{}), enabled: e.target.checked } });
@@ -101,6 +104,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // SCRUM-33/34: Generate via Ollama and populate results panel
     async function doGenerate() {
+        // Publish start event for AI generation [SCRUM-44]
+        try { window.eventBusService?.publish('ai_generate_start', {}); } catch {}
+        window.globalStateService?.setState?.({ loading: true });
         aiError.style.display = 'none';
         aiResultsPanel.style.display = 'none';
         aiResultText.textContent = '';
@@ -262,6 +268,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(err);
                 generateStatus.textContent = 'Error (vision)';
             } finally {
+                try { window.eventBusService?.publish('ai_generate_end', {}); } catch {}
+                window.globalStateService?.setState?.({ loading: false });
                 spinnerEl.hidden = true;
                 generateBtn.disabled = false;
                 if (visionGenBtn) visionGenBtn.disabled = false;
