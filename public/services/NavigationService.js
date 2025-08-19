@@ -66,6 +66,16 @@ class NavigationService {
                 component: 'SettingsModal'
             });
 
+            // Model Compatibility route
+            this.registerRoute('compatibility', {
+                id: 'compatibility',
+                title: 'Model Compatibility',
+                icon: '🧪',
+                shortcut: 'Alt+M',
+                component: 'ModelCompatibilityPanel'
+            });
+
+
             // Set initial route safely
             try {
                 this.navigate('questions');

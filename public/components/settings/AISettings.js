@@ -298,6 +298,33 @@ class AISettings {
                 validate();
 
             this.element.querySelectorAll('input[type="checkbox"], input[type="range"], textarea').forEach(input => {
+
+                // Add a discoverable entry point to Model Compatibility panel
+                try {
+                    const container = this.element.querySelector('.section-group');
+                    if (container && !container.querySelector('#openCompatibilityBtn')) {
+                        const group = document.createElement('div');
+                        group.className = 'setting-group';
+                        group.innerHTML = `
+                            <button id="openCompatibilityBtn" type="button" class="secondary">Open Model Compatibility</button>
+                            <p class="setting-description">Check your system’s compatibility for the selected models.</p>
+                        `;
+                        container.appendChild(group);
+                        const openBtn = group.querySelector('#openCompatibilityBtn');
+                        openBtn?.addEventListener('click', async () => {
+                            try {
+                                // Show panel
+                                window.modelCompatibilityPanel?.show?.();
+                                // Trigger a detailed check for the currently selected model
+                                const selected = this.element.querySelector('#aiModel')?.value || this.element.querySelector('#visionModel')?.value;
+                                if (selected && window.modelCompatibilityService?.checkCompatibility) {
+                                    await window.modelCompatibilityService.checkCompatibility(selected, { detailed: true });
+                                }
+                            } catch (e) { console.error('Failed to open compatibility panel:', e); }
+                        });
+                    }
+                } catch (e) { console.error('Failed to mount compatibility button', e); }
+
                 input.addEventListener('change', async () => {
                     const currentSettings = await window.electronAPI.getSettings();
                     await window.electronAPI.updateSettings({
