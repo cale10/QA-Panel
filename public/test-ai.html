@@ -52,8 +52,20 @@
     <script src="services/OllamaService.js"></script>
     <script>
         const output = document.getElementById('output');
-        // Use proxy-aware fetch from OllamaService when served via dev server
-        window.OLLAMA_PROXY = window.OLLAMA_PROXY || (location.origin.includes('8080') ? location.origin + '/proxy' : undefined);
+        // Use proxy-aware fetch from OllamaService; default to dev proxy if available
+        (function(){
+            try {
+                if (!window.OLLAMA_PROXY) {
+                    const origin = (location.origin || '').toLowerCase();
+                    if (origin.startsWith('http')) {
+                        window.OLLAMA_PROXY = origin.replace(/\/$/, '') + '/proxy';
+                    } else {
+                        // file:// page — point to local dev server proxy
+                        window.OLLAMA_PROXY = 'http://localhost:8080/proxy';
+                    }
+                }
+            } catch (e) { /* no-op */ }
+        })();
         const service = new OllamaService();
         
         function log(message, type = 'normal') {
