@@ -1,0 +1,51 @@
+[ ] NAME:Current Task List DESCRIPTION:Root task for conversation __NEW_AGENT__
+-[/] NAME:Make UI/ux adjustments that you recommend. Make a tasklist for this so I can assign it to a remote agent working in the background DESCRIPTION:Make UI/ux adjustments that you recommend. Make a tasklist for this so I can assign it to a remote agent working in the background
+-[x] NAME:Investigate/Triage/Understand the problem DESCRIPTION:Review current UI structure, components, and styles to tailor UI/UX recommendations. Inspect public/index.html, key components (NavigationBar, SettingsModal, MemoryControls, GlobalOverlay), and styles (main.css, theme.css, settings.css). Identify major UX flows: adding/editing questions, AI answer generation, settings, import/export, shortcuts.
+-[ ] NAME:UI/UX Enhancements Backlog DESCRIPTION:Parent container for actionable UI/UX improvements to QA Panel. Assign these to a remote agent. Keep tasks small (10–30 min each) and self‑contained.
+--[ ] NAME:Add keyboard navigation and ARIA roles to question list DESCRIPTION:- File: public/renderer.js, public/styles/main.css
+- Add proper roles (list, listitem, button) and aria-labels to generated elements in question list
+- Ensure each list item has tabindex=0 and supports Enter/Space to trigger Edit/Delete/AI actions
+- Add visible focus styles to .question-actions buttons and list items in CSS
+--[ ] NAME:Improve question/answer readability with typography and code formatting DESCRIPTION:- Files: styles/main.css
+- Increase base font-size to 16px; set line-height to 1.6
+- Style Q and A blocks; support fenced code blocks in answers (monospace, background, padding)
+- Add .answer pre/code styles; preserve whitespace with white-space: pre-wrap
+--[ ] NAME:Non-blocking AI generation state UI DESCRIPTION:- Files: public/renderer.js, styles/main.css
+- Disable only the clicked Generate button; show inline spinner and 'Cancel' option
+- Provide toast/status feedback on success or error; re-enable button appropriately
+--[ ] NAME:Empty state and guidance for first-time use DESCRIPTION:- Files: public/renderer.js, styles/main.css
+- When no questions, render a friendly empty state with example prompts and shortcuts
+- Link to Settings and show Toggle shortcut hint
+--[ ] NAME:Persistent capture preview controls and keyboard support DESCRIPTION:- Files: public/renderer.js, styles/main.css
+- Ensure capture preview close button is keyboard accessible; add Esc to close
+- Add 'Insert into answer' action if image present; update aria labels
+--[ ] NAME:Settings modal: add tabs for Theme, AI, Shortcuts with deep link support DESCRIPTION:- Files: components/SettingsModal.js
+- Allow show(tabName) to open on a specific tab; support hash routing '#settings=ai'
+- Focus management: return focus to Settings button on close
+--[ ] NAME:Visual hierarchy and spacing pass DESCRIPTION:- Files: styles/theme.css, styles/main.css
+- Introduce container max-width and centered layout; add consistent spacing scale
+- Polish button styles: primary/secondary/destructive variants; consistent hover/focus states
+--[ ] NAME:Question item action affordances DESCRIPTION:- Files: public/renderer.js, styles/main.css
+- Convert Edit/Delete to icon+label buttons with tooltips; add confirmation dialog for Delete
+- Add 'Copy Answer' and 'Mark as Verified' actions (persist verified flag)
+--[ ] NAME:Theme presets in settings with live preview DESCRIPTION:- Files: services/ThemeService.js, config/themes.json, components/SettingsModal.js
+- Offer preset dropdown; preview changes live before saving
+- Save preset name alongside custom overrides
+--[ ] NAME:Improve shortcuts discoverability DESCRIPTION:- Files: components/SettingsModal.js, public/index.html
+- Add a 'Shortcuts' quick help overlay (press ?); list current keybinds from settings
+- Provide 'Restore defaults' button
+--[ ] NAME:Error handling and inline notifications DESCRIPTION:- Files: public/services/*.js, public/renderer.js, styles/main.css
+- Standardize error surface (top-right toast or inline message area)
+- Catch and display errors from OllamaService and file ops with actionable text
+--[ ] NAME:Responsive layout and scroll behavior DESCRIPTION:- Files: styles/main.css
+- Ensure form and list adapt to smaller screens; sticky header for app-title and Settings
+- Avoid content jumping when toasts/preview appear
+--[ ] NAME:Accessibility: contrast and focus outlines DESCRIPTION:- Files: styles/theme.css, styles/main.css
+- Verify contrast ratios meet WCAG AA; add high-contrast focus outlines for all interactive elements
+- Provide a 'High contrast' toggle in settings.ai or theme settings
+--[ ] NAME:Onboarding tooltip for auto-capture DESCRIPTION:- Files: public/renderer.js, styles/main.css
+- When user first toggles auto-capture, show a one-time tooltip explaining how screenshots are used; store 'seen' flag in settings
+--[ ] NAME:Refine tray menu labels and add 'Show shortcuts' DESCRIPTION:- Files: public/electron.js
+- Rename 'Show App' to 'Open QA Panel'; add 'Shortcuts' item that triggers overlay
+- Ensure menu items have role/accelerator hints where applicable
+-[x] NAME:Make UI/UX adjustments that you recommend — produce tasklist DESCRIPTION:Create a prioritized, assignable UI/UX improvement tasklist tailored to this repo (files: public/index.html, public/renderer.js, public/styles/*.css, components/SettingsModal.js, services/*).

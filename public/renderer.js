@@ -249,11 +249,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-=======
-
-
-
-
 
 
     // Overlay restore defaults button
