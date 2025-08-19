@@ -188,21 +188,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     });
-    // Overlay restore defaults button
-    const restoreShortcutsBtn = document.getElementById('restoreShortcutsBtn');
-    if (restoreShortcutsBtn) {
-        restoreShortcutsBtn.addEventListener('click', async () => {
-            // Reset global shortcuts to defaults via settings
-            const defaultShortcuts = {
-                toggleApp: 'Shift+Space',
-                newQuestion: 'Shift+N',
-                exportData: 'Ctrl+Shift+E',
-                importData: 'Ctrl+Shift+I'
-            };
-            await window.electronAPI.updateSettings({ shortcuts: defaultShortcuts });
-            hideShortcutsOverlay();
-        });
-    }
 
 
     // Minimal Generate flow using Ollama via IPC

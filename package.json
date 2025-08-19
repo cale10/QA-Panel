@@ -9,13 +9,19 @@
     "build": "electron-builder",
     "test": "node public/services/tests/test-ollama-mock.js",
     "test:ollama-mock": "node public/services/tests/test-ollama-mock.js",
-    "check:ollama": "node public/services/ollama-endpoint-check.js"
+    "check:ollama": "node public/services/ollama-endpoint-check.js",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix",
+    "typecheck": "node scripts/typecheck.js"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/node": "^24.3.0",
     "electron": "^28.1.0",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "eslint": "^9.33.0",
+    "typescript": "^5.9.2"
   },
   "dependencies": {
     "active-win": "^8.1.1",
@@ -35,5 +41,10 @@
     "linux": {
       "target": "AppImage"
     }
+  },
+  "eslintConfig": {
+    "extends": [
+      "eslint:recommended"
+    ]
   }
 }
