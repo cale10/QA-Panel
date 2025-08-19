@@ -11,7 +11,10 @@
     "resolveJsonModule": true,
     "lib": ["ES2021", "DOM"]
   },
-  "include": [],
+  "include": [
+    "public/**/*.js",
+    "scripts/**/*.js"
+  ],
   "exclude": ["node_modules", "dist"]
 }
 
