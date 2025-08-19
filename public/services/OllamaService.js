@@ -24,9 +24,41 @@ class OllamaService {
         };
     }
 
+    // Base URL and proxy-aware fetch helper
+    baseUrl = 'http://localhost:11434';
+
+    _ollamaURL(path) {
+        return `${this.baseUrl}${path}`;
+    }
+
+    async _fetch(path, init = {}) {
+        // If a proxy is provided (e.g., http://localhost:8080/proxy), use it to avoid CORS
+        try {
+            if (typeof window !== 'undefined' && window.OLLAMA_PROXY) {
+                const payload = {
+                    url: this._ollamaURL(path),
+                    method: init.method || 'GET',
+                    headers: init.headers || {},
+                    body: init.body || undefined
+                };
+                return await fetch(window.OLLAMA_PROXY, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            }
+        } catch (e) {
+            // Fall through to direct fetch on proxy failure
+            console.warn('Proxy fetch failed, falling back to direct:', e?.message || e);
+        }
+        // Direct fetch to Ollama
+        return fetch(this._ollamaURL(path), init);
+    }
+
+
     async isOllamaRunning() {
         try {
-            const response = await fetch('http://localhost:11434/api/version');
+            const response = await this._fetch('/api/version');
             if (!response.ok) return false;
             const { version } = await response.json();
             this.serverVersion = (version || '').replace(/^v/i, '');
@@ -38,7 +70,7 @@ class OllamaService {
 
     async listModels() {
         try {
-            const response = await fetch('http://localhost:11434/api/tags');
+            const response = await this._fetch('/api/tags');
             if (!response.ok) throw new Error(`tags ${response.status}`);
             const data = await response.json();
             const models = (data.models || []).map(model => ({
@@ -96,7 +128,7 @@ class OllamaService {
 
     async generateAnswer(model, prompt, imageData = null, opts = {}) {
         try {
-            const endpoint = 'http://localhost:11434/api/generate';
+            const endpoint = '/api/generate';
             const body = {
                 model,
                 prompt,
@@ -108,7 +140,7 @@ class OllamaService {
                 ...(imageData && { images: [imageData] })
             };
 
-            const response = await fetch(endpoint, {
+            const response = await this._fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
@@ -128,7 +160,7 @@ class OllamaService {
     }
 
     async chat(model, messages = [], stream = false) {
-        const response = await fetch('http://localhost:11434/api/chat', {
+        const response = await this._fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model, messages, stream })
@@ -139,7 +171,7 @@ class OllamaService {
 
     async getModelInfo(model) {
         try {
-            const res = await fetch('http://localhost:11434/api/show', {
+            const res = await this._fetch('/api/show', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: model })
