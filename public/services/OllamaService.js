@@ -175,5 +175,10 @@ class OllamaService {
     }
 }
 
-// Export the class
-window.OllamaService = OllamaService;
+// Export the class for both browser and Node environments
+if (typeof window !== 'undefined') {
+    window.OllamaService = OllamaService;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = OllamaService;
+}

@@ -7,7 +7,8 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node public/services/tests/test-ollama-mock.js",
+    "test:ollama-mock": "node public/services/tests/test-ollama-mock.js",
     "check:ollama": "node public/services/ollama-endpoint-check.js"
   },
   "author": "",

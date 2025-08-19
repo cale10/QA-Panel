@@ -18,6 +18,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const aiError = document.getElementById('aiError');
     const copyToAnswerBtn = document.getElementById('copyToAnswerBtn');
     const clearResultBtn = document.getElementById('clearResultBtn');
+    const ollamaService = (typeof window !== 'undefined' && window.OllamaService) ? new OllamaService() : null;
+
+    // Regression guard: detect merge conflict markers in DOM
+    try {
+        const __html = document.documentElement?.innerHTML || '';
+        if (__html.includes('<<<<<<<') || __html.includes('=======') || __html.includes('>>>>>>>')) {
+            console.error('Merge conflict markers detected in DOM. Please resolve before shipping. [SCRUM-41]');
+        }
+    } catch (_) {}
+
     let editingId = null;
     let currentQuestions = [];
     let isEditing = false;
@@ -84,7 +94,15 @@ document.addEventListener('DOMContentLoaded', () => {
             announce('Enable AI to generate answers');
             return;
         }
-        const model = s.ai?.useVision ? (s.ai?.visionModel || 'llava:latest') : (s.ai?.model || 'llama2');
+        const useVision = !!s.ai?.useVision;
+        let model = useVision ? (s.ai?.visionModel) : (s.ai?.model);
+        if (!model && ollamaService) {
+            try {
+                const cat = await ollamaService.catalogModels();
+                model = useVision ? (cat.defaults?.defaultVisionModel) : (cat.defaults?.defaultRegularModel);
+            } catch (e) { /* ignore */ }
+        }
+        if (!model) { model = useVision ? 'llava:latest' : 'llama2'; }
         const prompt = questionInput.value.trim();
         if (!prompt) { questionInput.focus(); return; }
         spinnerEl.hidden = false; cancelGenBtn.hidden = false; generateBtn.disabled = true; generateStatus.textContent = 'Generating...';
@@ -130,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Settings button opens modal and stores focus return target
-    settingsBtn.addEventListener('click', () => {
+    settingsBtn?.addEventListener('click', () => {
         lastFocusedBeforeSettings = document.activeElement || settingsBtn;
         if (!settingsModal) {
             settingsModal = new SettingsModal();
@@ -178,9 +196,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (visionGenBtn) {
         visionGenBtn.addEventListener('click', async () => {
             try {
-                // Honor model setting; fallback to minicpm-v if unspecified
+                // Honor model setting; if unspecified, use OllamaService catalog defaults
                 const settings = await window.electronAPI.getSettings();
-                const model = settings?.ai?.visionModel || 'minicpm-v:latest';
+                let model = settings?.ai?.visionModel;
+                if (!model && ollamaService) {
+                    try {
+                        const cat = await ollamaService.catalogModels();
+                        model = cat.defaults?.defaultVisionModel;
+                    } catch (e) { /* ignore */ }
+                }
+                if (!model) model = 'minicpm-v:latest';
 
                 // Ensure question exists
                 const question = questionInput.value.trim();
@@ -510,6 +535,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Deep linking to open settings via hash: #settings
     if (window.location.hash === '#settings') {
-        settingsBtn.click();
+        settingsBtn?.click();
     }
 });
